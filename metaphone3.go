@@ -1422,8 +1422,137 @@ func (e *Encoder) encodeLeCases(idx int) {
 	e.metaphAdd('L')
 }
 
-//230
-func (e *Encoder) encodeM() { panic("not implemented") }
+func (e *Encoder) encodeM() {
+	if e.encodeSilentMAtBeginning() || e.encodeMrAndMrs() ||
+		e.encodeMac() || e.encodeMpt() {
+		return
+	}
+
+	// Silent 'B' should really be handled
+	// under 'B", not here under 'M'!
+	e.encodeMb()
+
+	e.metaphAdd('M')
+}
+
+func (e *Encoder) encodeSilentMAtBeginning() bool {
+	return e.stringAtStart(0, "MN")
+}
+
+func (e *Encoder) encodeMrAndMrs() bool {
+	if e.stringExact("MR") {
+		if e.EncodeVowels {
+			e.metaphAddStr("MASTAR", "MASTAR")
+		} else {
+			e.metaphAddStr("MSTR", "MSTR")
+		}
+		e.idx++
+		return true
+	} else if e.stringExact("MRS") {
+		if e.EncodeVowels {
+			e.metaphAddStr("MASAS", "MASAS")
+		} else {
+			e.metaphAddStr("MSS", "MSS")
+		}
+		e.idx += 2
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeMac() bool {
+	// should only find irish and
+	// scottish names e.g. 'macintosh'
+	if e.stringAtStart(0, "MC", "MACIVER", "MACEWEN", "MACELROY", "MACILROY", "MACINTOSH") {
+		if e.EncodeVowels {
+			e.metaphAddStr("MAK", "MAK")
+		} else {
+			e.metaphAddStr("MK", "MK")
+		}
+
+		if e.stringStart("MC") {
+			// watch out for e.g. "McGeorge"
+			if e.stringAt(2, "K", "G", "Q") && !e.stringAt(2, "GEOR") {
+				e.idx += 2
+			} else {
+				e.idx++
+			}
+		} else {
+			e.idx += 2
+		}
+
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeMpt() bool {
+	if e.stringAt(-2, "COMPTROL") || e.stringAt(-4, "ACCOMPT") {
+		e.metaphAdd('N')
+		e.idx++
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) testSilentMb1() bool {
+	// e.g. "LAMB", "COMB", "LIMB", "DUMB", "BOMB"
+	// Handle combining roots first
+	return e.stringAtStart(-3, "THUMB") || e.stringAtStart(-2, "DUMB", "BOMB", "DAMN", "LAMB", "NUMB", "TOMB")
+}
+
+func (e *Encoder) testPronouncedMb() bool {
+	return e.stringAt(-2, "NUMBER") ||
+		(e.stringAt(2, "A", "O") && !e.stringAt(-2, "DUMBASS")) ||
+		e.stringAt(-2, "LAMBEN", "LAMBER", "LAMBET", "TOMBIG", "LAMBRE")
+}
+
+func (e *Encoder) testSilentMb2() bool {
+	// 'M' is the current letter
+	return e.charNextIs('B') && e.idx > 1 &&
+		(e.idx+1 == e.lastIdx ||
+			// other situations where "-MB-" is at end of root
+			// but not at end of word. The tests are for standard
+			// noun suffixes.
+			// e.g. "climbing" => KLMNK
+			e.stringAt(2, "ING", "ABL", "LIKE") ||
+			e.stringAtEnd(2, "S") ||
+			e.stringAt(-5, "BUNCOMB") ||
+			//e.g. "bomber"
+			(e.stringAtEnd(2, "ED", "ER") &&
+				(e.stringStart("CLIMB", "PLUMB") || !e.stringAt(-1, "IMBER", "AMBER", "EMBER", "UMBER")) &&
+				!e.stringAt(-2, "CUMBER", "SOMBER")))
+}
+
+func (e *Encoder) testPronouncedMb2() bool {
+	// e.g. "bombastic", "umbrage", "flamboyant"
+	return e.stringAt(-1, "OMBAS", "OMBAD", "UMBRA") || e.stringAt(-3, "FLAM")
+}
+
+func (e *Encoder) testMn() bool {
+	return e.charNextIs('N') && (e.idx+1 == e.lastIdx ||
+		// or at the end of a word but followed by suffixes
+		e.stringAtEnd(2, "S", "LY", "ER", "ED", "ING", "EST") ||
+		e.stringAt(-2, "DAMNEDEST") ||
+		e.stringAt(-5, "GODDAMNIT"))
+}
+
+func (e *Encoder) encodeMb() {
+	if e.testSilentMb1() {
+		if !e.testPronouncedMb() {
+			e.idx++
+		}
+	} else if e.testSilentMb2() {
+		if !e.testPronouncedMb2() {
+			e.idx++
+		}
+	} else if e.testMn() || e.charNextIs('M') {
+		e.idx++
+	}
+}
 
 func (e *Encoder) encodeN() {
 	if e.encodeNce() {
