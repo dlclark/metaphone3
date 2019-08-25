@@ -847,7 +847,13 @@ func (e *Encoder) encodeF() {
 }
 
 //800
-func (e *Encoder) encodeG() { panic("not implemented") }
+func (e *Encoder) encodeG() {
+	//todo: special cases
+
+	if !e.stringAt(-1, "C", "K", "G", "Q") {
+		e.metaphAddExactApprox("G", "K")
+	}
+}
 
 func (e *Encoder) encodeH() {
 	if e.encodeInitialSilentH() || e.encodeInitialHs() ||
@@ -1585,8 +1591,131 @@ func (e *Encoder) encodeNce() bool {
 	return false
 }
 
-//230
-func (e *Encoder) encodeP() { panic("not implemented") }
+func (e *Encoder) encodeP() {
+	if e.encodeSilentPAtBeginning() || e.encodePt() || e.encodePh() ||
+		e.encodePph() || e.encodeRps() || e.encodeCoup() ||
+		e.encodePneum() || e.encodePsych() || e.encodePsalm() {
+		return
+	}
+
+	e.encodePb()
+
+	e.metaphAdd('P')
+}
+
+func (e *Encoder) encodeSilentPAtBeginning() bool {
+	return e.stringAtStart(0, "PN", "PF", "PS", "PT")
+}
+
+func (e *Encoder) encodePt() bool {
+	// 'pterodactyl', 'receipt', 'asymptote'
+	if e.charNextIs('T') &&
+		(e.stringAtStart(0, "PTERO") || e.stringAt(-5, "RECEIPT") || e.stringAt(-4, "ASYMPTOT")) {
+
+		e.metaphAdd('T')
+		e.idx++
+		return true
+	}
+
+	return false
+}
+
+//Encode "-PH-", usually as F, with exceptions for cases where it is silent, or
+//where the 'P' and 'T' are pronounced seperately because they belong to two
+//different words in a combining form
+func (e *Encoder) encodePh() bool {
+	if e.charNextIs('H') {
+		// 'PH' silent in these contexts
+		if e.stringAt(0, "PHTHALEIN") || e.stringAtStart(0, "PHTH") || e.stringAt(-3, "APOPHTHEGM") {
+			e.metaphAdd('0')
+			e.idx += 3
+		} else if e.idx > 0 &&
+			(e.stringAt(2, "AM", "EAD", "OLE", "ELD", "ILL", "OLD", "EAP", "ERD", "ARD", "ANG",
+				"ORN", "EAV", "ART", "OUSE", "AMMER", "AZARD", "UGGER", "OLSTER") && !e.stringAt(-1, "LPHAM")) &&
+			!e.stringAt(-3, "LYMPH", "NYMPH") {
+			// combining forms
+			// 'sheepherd', 'upheaval', 'cupholder'
+			e.metaphAdd('P')
+			e.advanceCounter(2, 1)
+		} else {
+			e.metaphAdd('F')
+			e.idx++
+		}
+
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodePph() bool {
+	// 'sappho'
+	if e.charNextIs('P') && e.idx+2 < len(e.in) && e.charAt(2, 'H') {
+		e.metaphAdd('F')
+		e.idx += 2
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeRps() bool {
+	// '-corps-', 'corpsman'
+	if e.stringAt(-3, "CORPS") && !e.stringAt(-3, "CORPSE") {
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeCoup() bool {
+	// 'coup'
+	return e.stringAtEnd(-3, "COUP") && !e.stringAt(-5, "RECOUP")
+}
+
+func (e *Encoder) encodePneum() bool {
+	// '-pneum-'
+	if e.stringAt(1, "NEUM") {
+		e.metaphAdd('N')
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodePsych() bool {
+	// '-psych-'
+	if e.stringAt(1, "SYCH") {
+		if e.EncodeVowels {
+			e.metaphAddStr("SAK", "SAK")
+		} else {
+			e.metaphAddStr("SK", "SK")
+		}
+		e.idx += 4
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodePsalm() bool {
+	if e.stringAt(1, "SALM") {
+		if e.EncodeVowels {
+			e.metaphAddStr("SAM", "SAM")
+		} else {
+			e.metaphAddStr("SM", "SM")
+		}
+		e.idx += 4
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodePb() {
+	// e.g. "campbell", "raspberry"
+	// eat redundant 'P' or 'B'
+	if e.stringAt(1, "P", "B") {
+		e.idx++
+	}
+}
 
 func (e *Encoder) encodeQ() {
 	// current pinyin
@@ -1709,10 +1838,288 @@ func (e *Encoder) encodeVowelReTransposition() bool {
 }
 
 //650
-func (e *Encoder) encodeS() { panic("not implemented") }
+func (e *Encoder) encodeS() {
+	//TODO: special cases
 
-//400
-func (e *Encoder) encodeT() { panic("not implemented") }
+	e.metaphAdd('S')
+
+	if e.stringAt(1, "S", "Z") && !e.stringAt(1, "SH") {
+		e.idx++
+	}
+}
+
+func (e *Encoder) encodeT() {
+	if e.encodeTInitial() || e.encodeTch() || e.encodeSilentFrenchT() ||
+		e.encodeTunTulTuaTuo() || e.encodeTueTeuTeouTulTie() || e.encodeTurTiuSuffixes() ||
+		e.encodeTi() || e.encodeTient() || e.encodeTsch() || e.encodeTzsch() ||
+		e.encodeThPronouncedSeparately() || e.encodeTth() || e.encodeTh() {
+		return
+	}
+
+	if e.stringAt(1, "T", "D") {
+		e.idx++
+	}
+	e.metaphAdd('T')
+}
+
+func (e *Encoder) encodeTInitial() bool {
+	if e.idx == 0 {
+		// americans usually pronounce "tzar" as "zar"
+		if e.stringAt(1, "SAR", "ZAR") {
+			return true
+		}
+
+		// old 'École française d'Extrême-Orient' chinese pinyin where 'ts-' => 'X'
+		if e.stringExact("TSO", "TSA", "TSU", "TSAO", "TSAI", "TSING", "TSANG") {
+			e.metaphAdd('X')
+			e.advanceCounter(2, 1)
+			return true
+		}
+
+		// "TS<vowel>-" at start can be pronounced both with and without 'T'
+		if e.charNextIs('S') && e.isVowelAt(2) {
+			e.metaphAddStr("TS", "S")
+			e.advanceCounter(2, 1)
+			return true
+		}
+
+		// e.g. "Tjaarda"
+		if e.charNextIs('J') {
+			e.metaphAdd('X')
+			e.advanceCounter(2, 1)
+			return true
+		}
+
+		if e.stringExact("TSU") || e.stringAt(1, "HAI", "HUY", "HAO", "HYME", "HYMY", "HANH", "HERES") {
+			e.metaphAdd('T')
+			e.advanceCounter(2, 1)
+			return true
+		}
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeTch() bool {
+	if e.stringAt(1, "CH") {
+		e.metaphAdd('X')
+		e.idx += 2
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSilentFrenchT() bool {
+	// french silent T familiar to americans
+	return (e.stringAtEnd(-4, "MONET", "GENET", "CHAUT") ||
+		e.stringAt(-2, "POTPOURRI") ||
+		e.stringAt(-3, "MORTGAGE", "BOATSWAIN") ||
+		e.stringAt(-4, "BERET", "BIDET", "FILET", "DEBUT", "DEPOT", "PINOT", "TAROT") ||
+		e.stringAt(-5, "BALLET", "BUFFET", "CACHET", "CHALET", "ESPRIT", "RAGOUT", "GOULET", "CHABOT", "BENOIT") ||
+		e.stringAt(-6, "GOURMET", "BOUQUET", "CROCHET", "CROQUET", "PARFAIT", "PINCHOT", "CABARET", "PARQUET", "RAPPORT", "TOUCHET", "COURBET", "DIDEROT") ||
+		e.stringAt(-7, "ENTREPOT", "CABERNET", "DUBONNET", "MASSENET", "MUSCADET", "RICOCHET", "ESCARGOT") ||
+		e.stringAt(-8, "SOBRIQUET", "CABRIOLET", "CASSOULET", "OUBRIQUET", "CAMEMBERT")) &&
+		!e.stringAt(1, "AN", "RY", "IC", "OM", "IN")
+}
+
+func (e *Encoder) encodeTunTulTuaTuo() bool {
+	// e.g. "fortune", "fortunate"
+	if e.stringAt(-3, "FORTUN") ||
+		// e.g. "capitulate"
+		(e.stringAt(0, "TUL") && e.isVowelAt(-1) && e.isVowelAt(3)) ||
+		// e.g. "obituary", "barbituate"
+		e.stringAt(-2, "BITUA", "BITUE") ||
+		// e.g. "actual"
+		(e.idx > 1 && e.stringAt(0, "TUA", "TUA")) {
+
+		e.metaphAddAlt('X', 'T')
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeTueTeuTeouTulTie() bool {
+	if e.stringAt(1, "UENT") ||
+		e.stringAt(-4, "RIGHTEOUS") ||
+		e.stringAt(-3, "STATUTE", "AMATEUR", "STATUTOR") ||
+		// e.g. "blastula", "pasteur"
+		e.stringAt(-1, "NTULE", "NTULA", "STULE", "STULA", "STEUR") ||
+		// e.g. "statue"
+		e.stringAtEnd(0, "TUE") ||
+		// e.g. "constituency"
+		e.stringAt(0, "TUENC") ||
+		// e.g. "patience"
+		e.stringAtEnd(0, "TIENCE") {
+
+		e.metaphAddAlt('X', 'T')
+		e.advanceCounter(1, 0)
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeTurTiuSuffixes() bool {
+	// 'adventure', 'musculature'
+	if e.idx > 0 && e.stringAt(1, "URE", "URA", "URI", "URY", "URO", "IUS") {
+		// exceptions e.g. 'tessitura', mostly from romance languages
+		if (e.stringAtEnd(1, "URA", "URO") && !e.stringAt(-3, "VENTURA")) ||
+			// e.g. "kachaturian", "hematuria"
+			e.stringAt(1, "URIA") {
+
+			e.metaphAdd('T')
+		} else {
+			e.metaphAddAlt('X', 'T')
+		}
+
+		e.advanceCounter(1, 0)
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeTi() bool {
+	// '-tio-', '-tia-', '-tiu-'
+	// except combining forms where T already pronounced e.g 'rooseveltian'
+	if (e.stringAt(1, "IO") && !e.stringAt(-1, "ETIOL")) ||
+		e.stringAt(1, "IAL") ||
+		e.stringAt(-1, "RTIUM", "ATIUM") ||
+		((e.stringAt(1, "IAN") && e.idx > 0) &&
+			!(e.stringAt(-4, "FAUSTIAN") || e.stringAt(-5, "PROUSTIAN") ||
+				e.stringAt(-2, "TATIANA") || e.stringAt(-3, "KANTIAN", "GENTIAN") ||
+				e.stringAt(-8, "ROOSEVELTIAN")) ||
+			(e.stringAtEnd(0, "TIA") &&
+				// exceptions to above rules where the pronounciation is usually X
+				!(e.stringAt(-3, "HESTIA", "MASTIA") ||
+					e.stringAt(-2, "OSTIA") || e.stringStart("TIA") ||
+					e.stringAt(-5, "IZVESTIA"))) ||
+			e.stringAt(1, "IATE", "IATI", "IABL", "IATO", "IARY") ||
+			e.stringAt(-5, "CHRISTIAN")) {
+
+		if e.stringAtStart(0, "ANTI") || e.stringStart("PATIO", "PITIA", "DUTIA") {
+			e.metaphAdd('T')
+		} else if e.stringAt(-4, "EQUATION") {
+			e.metaphAdd('J')
+		} else if e.stringAt(0, "TION") {
+			e.metaphAdd('X')
+		} else if e.stringStart("KATIA", "LATIA") {
+			e.metaphAddAlt('T', 'X')
+		} else {
+			e.metaphAddAlt('X', 'T')
+		}
+
+		e.advanceCounter(2, 0)
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeTient() bool {
+	// e.g. 'patient'
+	if e.stringAt(1, "IENT") {
+		e.metaphAddAlt('X', 'T')
+		e.advanceCounter(2, 0)
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeTsch() bool {
+	// 'deutsch'
+	if e.stringAt(0, "TSCH") &&
+		// combining forms in german where the 'T' is pronounced seperately
+		!e.stringAt(-3, "WELT", "KLAT", "FEST") {
+
+		// pronounced the same as "ch" in "chit" => X
+		e.metaphAdd('X')
+		e.idx += 3
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeTzsch() bool {
+	// 'neitzsche'
+	if e.stringAt(0, "TZSCH") {
+		e.metaphAdd('X')
+		e.idx += 4
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeThPronouncedSeparately() bool {
+	// 'adulthood', 'bithead', 'apartheid'
+	if (e.idx > 0 && e.stringAt(1, "HOOD", "HEAD", "HEID", "HAND", "HILL", "HOLD", "HAWK", "HEAP", "HERD",
+		"HOLE", "HOOK", "HUNT", "HUMO", "HAUS", "HOFF", "HARD") && !e.stringAt(-3, "SOUTH", "NORTH")) ||
+		e.stringAt(1, "HOUSE", "HEART", "HASTE", "HYPNO", "HEQUE") ||
+		// watch out for greek root "-thallic"
+		(e.stringAtEnd(1, "HALL") && !e.stringAt(-3, "SOUTH", "NORTH")) ||
+		(e.stringAtEnd(1, "HAM") && !e.stringStart("GOTHAM", "WITHAM", "LATHAM", "BENTHAM", "WALTHAM", "WORTHAM", "GRANTHAM")) ||
+		(e.stringAt(1, "HATCH") && !(e.idx == 0 || e.stringAt(-2, "UNTHATCH"))) ||
+		e.stringAt(-3, "GOETHE", "WARTHOG") ||
+		// and some special cases where "-TH-" is usually pronounced 'T'
+		e.stringAt(-2, "ESTHER", "NATHALIE") {
+
+		//special case
+		if e.stringAt(-3, "POSTHUM") {
+			e.metaphAdd('X')
+		} else {
+			e.metaphAdd('T')
+		}
+		e.idx++
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeTth() bool {
+	// 'matthew' vs. 'outthink'
+	if e.stringAt(0, "TTH") {
+		if e.stringAt(-2, "MATTH") {
+			e.metaphAdd('0')
+		} else {
+			e.metaphAddStr("T0", "T0")
+		}
+		e.idx += 2
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeTh() bool {
+	if e.stringAt(0, "TH") {
+		// '-clothes-'
+		if e.stringAt(-3, "CLOTHES") {
+			// vowel already encoded so skip right to S
+			e.idx += 2
+			return true
+		}
+
+		// special case "thomas", "thames", "beethoven" or germanic words
+		if e.stringAt(2, "OMAS", "OMPS", "OMPK", "OMSO", "OMSE", "AMES", "OVEN", "OFEN", "ILDA", "ILDE") ||
+			e.stringExact("THOM", "THOMS") ||
+			e.stringStart("SCH", "VAN ", "VON ") {
+
+			e.metaphAdd('T')
+		} else {
+			// give an 'etymological' 2nd
+			// encoding for "smith"
+			if e.stringStart("SM") {
+				e.metaphAddAlt('0', 'T')
+			} else {
+				e.metaphAdd('0')
+			}
+		}
+
+		e.idx++
+		return true
+	}
+	return false
+}
 
 func (e *Encoder) encodeV() {
 	if e.charNextIs('V') {
@@ -1721,8 +2128,161 @@ func (e *Encoder) encodeV() {
 	e.metaphAddExactApprox("V", "F")
 }
 
-//200
-func (e *Encoder) encodeW() { panic("not implemented") }
+func (e *Encoder) encodeW() {
+	if e.encodeSilentWAtBeginning() || e.encodeWitzWicz() || e.encodeWr() ||
+		e.encodeInitialWVowel() || e.encodeWh() || e.encodeEasternEuropeanW() {
+		return
+	}
+
+	// e.g. 'zimbabwe'
+	if e.EncodeVowels && e.stringAtEnd(0, "WE") {
+		e.metaphAdd('A')
+	}
+}
+
+func (e *Encoder) encodeSilentWAtBeginning() bool {
+	return e.stringAtStart(0, "WR")
+}
+
+func (e *Encoder) encodeWitzWicz() bool {
+	// polish e.g. 'filipowicz'
+	if e.stringAtEnd(0, "WICZ", "WITZ") {
+		if e.EncodeVowels {
+			// don't dupe A's
+			if len(e.primBuf) > 0 && e.primBuf[len(e.primBuf)-1] == 'A' {
+				e.metaphAddStr("TS", "FAX")
+			} else {
+				e.metaphAddStr("ATS", "FAX")
+			}
+		} else {
+			e.metaphAddStr("TS", "FX")
+		}
+
+		e.idx += 3
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeWr() bool {
+	// can also be in middle of word
+	if e.stringAt(0, "WR") {
+		e.metaphAdd('R')
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeInitialWVowel() bool {
+	if e.idx == 0 && e.isVowelAt(1) {
+		// Witter should match Vitter
+		if e.germanicOrSlavicNameBeginningWithW() {
+			if e.EncodeVowels {
+				e.metaphAddExactApproxAlt("A", "VA", "A", "FA")
+			} else {
+				e.metaphAddExactApproxAlt("A", "V", "A", "F")
+			}
+		} else {
+			e.metaphAdd('A')
+		}
+
+		e.idx = e.skipVowels(e.idx + 1)
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeWh() bool {
+	if e.stringAt(0, "WH") {
+		// cases where it is pronounced as H
+		// e.g. 'who', 'whole'
+		if e.charAt(2, 'O') && !e.stringAt(2, "OA", "OP", "OOP", "OMP", "ORL", "ORT", "OOSH") {
+			e.metaphAdd('H')
+			e.advanceCounter(2, 1)
+			return true
+		}
+
+		// combining forms, e.g. 'hollowhearted', 'rawhide'
+		if e.stringAt(2, "IDE", "ARD", "EAD", "AWK", "ERD", "OOK", "AND", "OLE", "OOD",
+			"EART", "OUSE", "OUND", "AMMER") {
+			e.metaphAdd('H')
+			e.idx++
+			return true
+		}
+
+		if e.idx == 0 {
+			e.metaphAdd('A')
+			e.idx = e.skipVowels(e.idx + 2)
+			return true
+		}
+
+		e.idx++
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeEasternEuropeanW() bool {
+	// Arnow should match Arnoff
+	if (e.idx == e.lastIdx && e.isVowelAt(-1)) ||
+		e.stringAt(-1, "EWSKI", "EWSKY", "OWSKI", "OWSKY") ||
+		e.stringAtEnd(0, "WICKI", "WACKI") ||
+		(e.stringAt(0, "WIAK") && (e.idx+3 == e.lastIdx || e.stringStart("SCH"))) {
+
+		e.metaphAddExactApproxAlt("", "V", "", "F")
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) germanicOrSlavicNameBeginningWithW() bool {
+	return e.stringStart("WEE", "WIX", "WAX",
+		"WOLF", "WEIS", "WAHL", "WALZ", "WEIL", "WERT", "WINE", "WILK", "WALT", "WOLL",
+		"WADA", "WULF", "WEHR", "WURM", "WYSE", "WENZ", "WIRT", "WOLK", "WEIN", "WYSS", "WASS", "WANN",
+		"WINT", "WINK", "WILE", "WIKE", "WIER", "WELK", "WISE",
+		"WIRTH", "WIESE", "WITTE", "WENTZ", "WOLFF", "WENDT", "WERTZ", "WILKE", "WALTZ",
+		"WEISE", "WOOLF", "WERTH", "WEESE", "WURTH", "WINES", "WARGO", "WIMER", "WISER", "WAGER",
+		"WILLE", "WILDS", "WAGAR", "WERTS", "WITTY", "WIENS", "WIEBE", "WIRTZ", "WYMER", "WULFF",
+		"WIBLE", "WINER", "WIEST", "WALKO", "WALLA", "WEBRE", "WEYER", "WYBLE", "WOMAC", "WILTZ",
+		"WURST", "WOLAK", "WELKE", "WEDEL", "WEIST", "WYGAN", "WUEST", "WEISZ", "WALCK", "WEITZ",
+		"WYDRA", "WANDA", "WILMA", "WEBER",
+		"WETZEL", "WEINER", "WENZEL", "WESTER", "WALLEN", "WENGER", "WALLIN", "WEILER",
+		"WIMMER", "WEIMER", "WYRICK", "WEGNER", "WINNER", "WESSEL", "WILKIE", "WEIGEL", "WOJCIK",
+		"WENDEL", "WITTER", "WIENER", "WEISER", "WEXLER", "WACKER", "WISNER", "WITMER", "WINKLE",
+		"WELTER", "WIDMER", "WITTEN", "WINDLE", "WASHER", "WOLTER", "WILKEY", "WIDNER", "WARMAN",
+		"WEYANT", "WEIBEL", "WANNER", "WILKEN", "WILTSE", "WARNKE", "WALSER", "WEIKEL", "WESNER",
+		"WITZEL", "WROBEL", "WAGNON", "WINANS", "WENNER", "WOLKEN", "WILNER", "WYSONG", "WYCOFF",
+		"WUNDER", "WINKEL", "WIDMAN", "WELSCH", "WEHNER", "WEIGLE", "WETTER", "WUNSCH", "WHITTY",
+		"WAXMAN", "WILKER", "WILHAM", "WITTIG", "WITMAN", "WESTRA", "WEHRLE", "WASSER", "WILLER",
+		"WEGMAN", "WARFEL", "WYNTER", "WERNER", "WAGNER", "WISSER",
+		"WISEMAN", "WINKLER", "WILHELM", "WELLMAN", "WAMPLER", "WACHTER", "WALTHER",
+		"WYCKOFF", "WEIDNER", "WOZNIAK", "WEILAND", "WILFONG", "WIEGAND", "WILCHER", "WIELAND",
+		"WILDMAN", "WALDMAN", "WORTMAN", "WYSOCKI", "WEIDMAN", "WITTMAN", "WIDENER", "WOLFSON",
+		"WENDELL", "WEITZEL", "WILLMAN", "WALDRUP", "WALTMAN", "WALCZAK", "WEIGAND", "WESSELS",
+		"WIDEMAN", "WOLTERS", "WIREMAN", "WILHOIT", "WEGENER", "WOTRING", "WINGERT", "WIESNER",
+		"WAYMIRE", "WHETZEL", "WENTZEL", "WINEGAR", "WESTMAN", "WYNKOOP", "WALLICK", "WURSTER",
+		"WINBUSH", "WILBERT", "WALLACH", "WYNKOOP", "WALLICK", "WURSTER", "WINBUSH", "WILBERT",
+		"WALLACH", "WEISSER", "WEISNER", "WINDERS", "WILLMON", "WILLEMS", "WIERSMA", "WACHTEL",
+		"WARNICK", "WEIDLER", "WALTRIP", "WHETSEL", "WHELESS", "WELCHER", "WALBORN", "WILLSEY",
+		"WEINMAN", "WAGAMAN", "WOMMACK", "WINGLER", "WINKLES", "WIEDMAN", "WHITNER", "WOLFRAM",
+		"WARLICK", "WEEDMAN", "WHISMAN", "WINLAND", "WEESNER", "WARTHEN", "WETZLER", "WENDLER",
+		"WALLNER", "WOLBERT", "WITTMER", "WISHART", "WILLIAM",
+		"WESTPHAL", "WICKLUND", "WEISSMAN", "WESTLUND", "WOLFGANG", "WILLHITE", "WEISBERG",
+		"WALRAVEN", "WOLFGRAM", "WILHOITE", "WECHSLER", "WENDLING", "WESTBERG", "WENDLAND", "WININGER",
+		"WHISNANT", "WESTRICK", "WESTLING", "WESTBURY", "WEITZMAN", "WEHMEYER", "WEINMANN", "WISNESKI",
+		"WHELCHEL", "WEISHAAR", "WAGGENER", "WALDROUP", "WESTHOFF", "WIEDEMAN", "WASINGER", "WINBORNE",
+		"WHISENANT", "WEINSTEIN", "WESTERMAN", "WASSERMAN", "WITKOWSKI", "WEINTRAUB",
+		"WINKELMAN", "WINKFIELD", "WANAMAKER", "WIECZOREK", "WIECHMANN", "WOJTOWICZ", "WALKOWIAK",
+		"WEINSTOCK", "WILLEFORD", "WARKENTIN", "WEISINGER", "WINKLEMAN", "WILHEMINA",
+		"WISNIEWSKI", "WUNDERLICH", "WHISENHUNT", "WEINBERGER", "WROBLEWSKI", "WAGUESPACK",
+		"WEISGERBER", "WESTERVELT", "WESTERLUND", "WASILEWSKI", "WILDERMUTH", "WESTENDORF",
+		"WESOLOWSKI", "WEINGARTEN", "WINEBARGER", "WESTERBERG", "WANNAMAKER", "WEISSINGER",
+		"WALDSCHMIDT", "WEINGARTNER", "WINEBRENNER",
+		"WOLFENBARGER", "WOJCIECHOWSKI")
+}
 
 func (e *Encoder) encodeX() {
 	if e.encodeInitialX() || e.encodeGreekX() || e.encodeXSpecialCases() ||
@@ -2466,7 +3026,7 @@ func (e *Encoder) skipVowels(at int) int {
 	}
 
 	it := e.in[at]
-	off := e.idx - at
+	off := at - e.idx
 
 	for isVowel(it) || it == 'W' {
 
