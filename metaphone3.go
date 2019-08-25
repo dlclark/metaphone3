@@ -861,6 +861,7 @@ func (e *Encoder) encodeH() {
 		return
 	}
 
+	// only keep if first & before vowel or btw. 2 vowels
 	if !e.encodeHPronounced() {
 		//e.idx++ ?
 	}
@@ -938,7 +939,9 @@ func (e *Encoder) encodeNonInitialSilentH() bool {
 }
 
 func (e *Encoder) encodeHPronounced() bool {
-	if (e.idx == 0 || e.isVowelAt(-1) || (e.idx > 0 && e.charAt(-1, 'W')) && e.isVowelAt(1)) ||
+	if ((e.idx == 0 || e.isVowelAt(-1) || (e.idx > 0 && e.charAt(-1, 'W'))) &&
+		e.isVowelAt(1)) ||
+		// e.g. 'alWahhab'
 		(e.charNextIs('H') && e.isVowelAt(2)) {
 
 		e.metaphAdd('H')
@@ -1370,20 +1373,21 @@ func (e *Encoder) encodeVowelLeTransposition(idx int) bool {
 	// transposition of vowel sound and L occurs in many words,
 	// e.g. "bristle", "dazzle", "goggle" => KAKAL
 	offset := e.idx - idx
-	if e.EncodeVowels && idx > 1 && e.isVowelAt(offset-1) && e.charAt(offset+1, 'E') &&
+	if e.EncodeVowels && idx > 1 && !e.isVowelAt(offset-1) && e.charAt(offset+1, 'E') &&
 		!e.charAt(offset-1, 'L') && !e.charAt(offset-1, 'R') &&
 		// lots of exceptions to this:
 		!e.isVowelAt(offset+2) &&
 		!e.stringStart("MCCLE", "MCLEL", "EMBLEM", "KADLEC", "ECCLESI", "COMPLEC", "COMPLEJ", "ROBLEDO") &&
-		!(e.idx+2 == e.lastIdx && e.stringAt(offset, "LET")) &&
+		!(idx+2 == e.lastIdx && e.stringAt(offset, "LET")) &&
 		!e.stringAt(offset, "LEG", "LER", "LEX", "LESS", "LESQ", "LECT", "LEDG", "LETE", "LETH", "LETS", "LETT",
 			"LETUS", "LETIV", "LETELY", "LETTER", "LETION", "LETIAN", "LETING", "LETORY", "LETTING") &&
 		// e.g. "complement" !=> KAMPALMENT
 		!(e.stringAt(offset, "LEMENT") &&
-			!(e.stringAt(offset-5, "BATTLE", "TANGLE", "PUZZLE", "RABBLE", "BABBLE") || e.stringAt(offset-4, "TABLE"))) &&
+			!(e.stringAt(-5, "BATTLE", "TANGLE", "PUZZLE", "RABBLE", "BABBLE") || e.stringAt(-4, "TABLE"))) &&
 		!(idx+2 == e.lastIdx && e.stringAt(offset-2, "OCLES", "ACLES", "AKLES")) &&
+		!e.stringAt(offset-3, "LISLE", "AISLE") && !e.stringStart("ISLE") &&
 		!e.stringStart("ROBLES") &&
-		!e.stringAt(-4, "PROBLEM", "RESPLEN") &&
+		!e.stringAt(offset-4, "PROBLEM", "RESPLEN") &&
 		!e.stringAt(offset-3, "REPLEN") &&
 		!e.stringAt(offset-2, "SPLE") &&
 		!e.charAt(offset-1, 'H') && !e.charAt(offset-1, 'W') {
@@ -1736,10 +1740,8 @@ func (e *Encoder) encodeR() {
 		return
 	}
 
-	if !e.testSilentR() {
-		if e.encodeVowelReTransposition() {
-			e.metaphAdd('R')
-		}
+	if !e.testSilentR() && !e.encodeVowelReTransposition() {
+		e.metaphAdd('R')
 	}
 
 	// eat redundant 'R'; also skip 'S' as well as 'R' in "poitiers"
@@ -2457,7 +2459,7 @@ func (e *Encoder) encodeVowels() {
 		// as of Double Metaphone
 		e.metaphAdd('A')
 	} else if e.EncodeVowels {
-		if !e.charAt(e.idx, 'E') {
+		if !e.charAt(0, 'E') {
 			if e.encodeSkipSilentUe() {
 				return
 			}
@@ -2498,8 +2500,7 @@ func (e *Encoder) encodeSkipSilentUe() bool {
 func (e *Encoder) encodeEPronounced() {
 	// special cases with two pronunciations
 	// 'agape' 'lame' 'resume'
-	if e.stringExact("LAME", "SAKE", "PATE") ||
-		e.stringExact("AGAPE") ||
+	if e.stringExact("LAME", "SAKE", "PATE", "AGAPE") ||
 		(e.stringStart("RESUME") && e.idx == 5) {
 
 		e.metaphAddAlt(unicode.ReplacementChar, 'A')
