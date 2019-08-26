@@ -1,8 +1,12 @@
 package metaphone3
 
 import (
+	"fmt"
 	"unicode"
 )
+
+// debug flag to output additional data during encoding
+var debug = false
 
 // DefaultMaxLength is the max number of runes in a result when not specified in the encoder
 var DefaultMaxLength = 8
@@ -61,8 +65,14 @@ func (e *Encoder) Encode(in string) (primary, secondary string) {
 	for e.idx = 0; e.idx < len(e.in); e.idx++ {
 
 		// double check our output buffers, if they're full then we're done
-		if len(e.primBuf) >= e.MaxLength || len(e.secondBuf) >= e.MaxLength {
+		// we're not checking exact "=" just be compat with the reference java implementation
+		// that means our buffers could be longer than MaxLength by a bit
+		if len(e.primBuf) >= e.MaxLength && len(e.secondBuf) >= e.MaxLength {
 			break
+		}
+
+		if debug {
+			fmt.Printf("Processing %v\n", string(e.in[e.idx]))
 		}
 
 		switch c := e.in[e.idx]; c {
@@ -125,6 +135,14 @@ func (e *Encoder) Encode(in string) (primary, secondary string) {
 		}
 	}
 
+	// trim our buffers if needed
+	if len(e.primBuf) > e.MaxLength {
+		e.primBuf = e.primBuf[:e.MaxLength]
+	}
+	if len(e.secondBuf) > e.MaxLength {
+		e.secondBuf = e.secondBuf[:e.MaxLength]
+	}
+
 	if areEqual(e.primBuf, e.secondBuf) {
 		return string(e.primBuf), ""
 	}
@@ -179,7 +197,7 @@ func (e *Encoder) encodeC() {
 		return
 	}
 
-	if e.stringAt(-1, "C", "K", "G", "Q") {
+	if !e.stringAt(-1, "C", "K", "G", "Q") {
 		e.metaphAdd('K')
 	}
 
@@ -188,9 +206,9 @@ func (e *Encoder) encodeC() {
 		e.idx++
 	} else {
 		if e.stringAt(1, "C", "K", "Q") && !e.stringAt(1, "CE", "CI") {
-			e.idx++
+			e.idx++ // increment 1 here, so adjust offsets below
 			// account for combinations such as Ro-ckc-liffe
-			if e.stringAt(0, "C", "K", "Q") && !e.stringAt(1, "CE", "CI") {
+			if e.stringAt(1, "C", "K", "Q") && !e.stringAt(2, "CE", "CI") {
 				e.idx++
 			}
 		}
@@ -322,7 +340,7 @@ func (e *Encoder) encodeChToX() bool {
 		e.stringAt(-4, "ATTACH", "DETACH", "KOVACH", "PARACHUT") ||
 		e.stringAt(-5, "SPINACH", "MASSACHU") ||
 		e.stringStart("MACHAU") ||
-		(e.stringAt(-3, "THACH") && !e.stringAt(1, "E")) || // no ACHE
+		(e.stringAt(-3, "THACH") && !e.stringAt(2, "E")) || // no ACHE
 		e.stringAt(-2, "VACHON") {
 
 		e.metaphAdd('X')
@@ -339,7 +357,7 @@ func (e *Encoder) encodeEnglishChToK() bool {
 		((e.idx > 3 && rootOrInflections(e.in[e.idx-1:], "ACHE")) &&
 			e.stringStart("EAR", "HEAD", "BACK", "HEART", "BELLY", "TOOTH")) ||
 		e.stringAt(-1, "ECHO") ||
-		e.stringAt(-2, "MICHAEL") ||
+		e.stringAt(-2, "MICHEAL") ||
 		e.stringAt(-4, "JERICHO") ||
 		e.stringAt(-5, "LEPRECH") {
 
@@ -370,12 +388,13 @@ func (e *Encoder) encodeGermanicChToK() bool {
 		e.stringAt(-4, "SCHACH") ||
 		e.stringAt(-1, "ACHEN") ||
 		e.stringAt(-3, "SPICH", "ZURCH", "BUECH") ||
-		(e.stringAt(-3, "KIRCH", "JOACH", "BLECH", "MALCH") && !(e.stringAt(-3, "KIRCHNER") || e.idx+1 == e.lastIdx)) || // "kirch" and "blech" both get 'X'
+		(e.stringAt(-3, "KIRCH", "JOACH", "BLECH", "MALCH") &&
+			!(e.stringAt(-3, "KIRCHNER") || e.idx+1 == e.lastIdx)) || // "kirch" and "blech" both get 'X'
 		e.stringAtEnd(-2, "NICH", "LICH", "BACH") ||
-		e.stringAtEnd(-3, "URICH", "BRICH", "ERICH", "DRICH", "NRICH") ||
-		e.stringAtEnd(-5, "ALDRICH") ||
-		e.stringAtEnd(-6, "GOODRICH") ||
-		e.stringAtEnd(-7, "GINGERICH")) ||
+		(e.stringAtEnd(-3, "URICH", "BRICH", "ERICH", "DRICH", "NRICH") &&
+			!e.stringAtEnd(-5, "ALDRICH") &&
+			!e.stringAtEnd(-6, "GOODRICH") &&
+			!e.stringAtEnd(-7, "GINGERICH"))) ||
 		e.stringAtEnd(-4, "ULRICH", "LFRICH", "LLRICH", "EMRICH", "ZURICH", "EYRICH") ||
 		// e.g., 'wachtler', 'wechsler', but not 'tichner'
 		((e.stringAt(-1, "A", "O", "U", "E") || e.idx == 0) &&
@@ -555,9 +574,9 @@ func (e *Encoder) encodeCkCgCq() bool {
 		} else {
 			e.metaphAdd('K')
 		}
-		if e.stringAt(2, "K", "G", "Q") {
-			e.idx += 2
-		} else {
+		e.idx++ // skip the C
+		// if there's a C[KGQ][KGQ] then skip that second one too
+		if e.stringAt(1, "K", "G", "Q") {
 			e.idx++
 		}
 
@@ -617,7 +636,7 @@ func (e *Encoder) encodeCi() bool {
 	// with consonant before C
 	// e.g. 'fettucini', but exception for the americanized pronunciation of 'mancini'
 
-	if (e.stringAt(1, "INI") && !e.stringAtEnd(-e.idx, "MANCINI")) ||
+	if (e.stringAtEnd(1, "INI") && !e.stringExact("MANCINI")) ||
 		e.stringAtEnd(-1, "ICI") || // e.g. 'medici'
 		e.stringAt(-1, "RCIAL", "NCIAL", "RCIAN", "UCIUS") || // e.g. "commercial', 'provincial', 'cistercian'
 		e.stringAt(-3, "MARCIA") || // special cases
@@ -907,7 +926,7 @@ func (e *Encoder) encodeInitialHuHw() bool {
 	if e.stringStart("HUA", "HUE", "HWA") && !e.stringAt(0, "HUEY") {
 		e.metaphAdd('A')
 
-		if e.EncodeVowels {
+		if !e.EncodeVowels {
 			e.idx += 2
 		} else {
 			e.idx++
@@ -1297,7 +1316,7 @@ func (e *Encoder) encodeSilentLInLm() bool {
 
 func (e *Encoder) encodeSilentLInLkLv() bool {
 	if (e.stringAt(-2, "WALK", "YOLK", "FOLK", "HALF", "TALK", "CALF", "BALK", "CALK") ||
-		(e.stringAt(-2, "POLK", "HALV", "SALVE", "CALVE", "SOLDER") && !e.stringAt(-2, "POLKA, PALKO", "HALVA", "HALVO", "SALVER", "CALVER")) ||
+		(e.stringAt(-2, "POLK", "HALV", "SALVE", "CALVE", "SOLDER") && !e.stringAt(-2, "POLKA", "PALKO", "HALVA", "HALVO", "SALVER", "CALVER")) ||
 		(e.stringAt(-3, "CAULK", "CHALK", "BAULK", "FAULK") && !e.stringAt(-4, "SCHALK"))) &&
 		!e.stringAt(-5, "GONSALVES", "GONCALVES") &&
 		!e.stringAt(-2, "BALKAN", "TALKAL") &&
@@ -1329,7 +1348,7 @@ func (e *Encoder) encodeLlAsVowelSpecialCases() bool {
 			// 'guillotine' usually has '-ll-' pronounced as 'L' in english
 			!(e.stringAt(-3, "GUILLOT", "GUILLOR", "GUILLEN") || e.stringExact("GUILL"))) ||
 		// e.g. "brouillard", "gremillion"
-		e.stringStart("BROUILL", "GREMILL", "ROBILL") ||
+		e.stringStart("ROBILL", "BROUILL", "GREMILL") ||
 		// e.g. 'mireille'
 		// exception "reveille" usually pronounced as 're-vil-lee'
 		(e.stringAtEnd(-2, "EILLE") && !e.stringAt(-5, "REVEILLE")) {
@@ -1349,7 +1368,7 @@ func (e *Encoder) encodeLlAsVowel() bool {
 		(e.stringEnd("A", "O", "AS", "OS") && e.stringAt(-1, "AL", "IL") && !e.stringAt(-1, "ALLA")) ||
 		e.stringStart("LLA", "VILLE", "VILLA", "GALLARDO", "VALLADAR", "MAGALLAN", "CAVALLAR", "BALLASTE") {
 
-		e.metaphAdd('L')
+		e.metaphAddAlt('L', unicode.ReplacementChar)
 		e.idx++
 		return true
 	}
@@ -1406,15 +1425,15 @@ func (e *Encoder) encodeVowelLeTransposition(idx int) bool {
 }
 
 func (e *Encoder) encodeVowelPreserveVowelAfterL(idx int) bool {
-	offset := e.idx - idx
+	offset := idx - e.idx
 
-	if e.EncodeVowels && e.isVowelAt(offset-1) && e.charAt(offset+1, 'E') && idx > 1 &&
+	if e.EncodeVowels && !e.isVowelAt(offset-1) && e.charAt(offset+1, 'E') && idx > 1 &&
 		idx+1 != e.lastIdx &&
 		!(e.stringAt(offset+1, "ES", "ED") && idx+2 == e.lastIdx) &&
 		!e.stringAt(offset-1, "RLEST") {
 
 		e.metaphAddStr("LA", "LA")
-		e.idx = e.skipVowels(e.idx)
+		e.idx = e.skipVowels(e.idx + 1)
 		return true
 	}
 
@@ -1892,7 +1911,7 @@ func (e *Encoder) encodeTInitial() bool {
 			return true
 		}
 
-		if e.stringExact("TSU") || e.stringAt(1, "HAI", "HUY", "HAO", "HYME", "HYMY", "HANH", "HERES") {
+		if e.stringExact("THU") || e.stringAt(1, "HAI", "HUY", "HAO", "HYME", "HYMY", "HANH", "HERES") {
 			e.metaphAdd('T')
 			e.advanceCounter(2, 1)
 			return true
@@ -1932,7 +1951,7 @@ func (e *Encoder) encodeTunTulTuaTuo() bool {
 		// e.g. "obituary", "barbituate"
 		e.stringAt(-2, "BITUA", "BITUE") ||
 		// e.g. "actual"
-		(e.idx > 1 && e.stringAt(0, "TUA", "TUA")) {
+		(e.idx > 1 && e.stringAt(0, "TUA", "TUO")) {
 
 		e.metaphAddAlt('X', 'T')
 		return true
@@ -1998,7 +2017,7 @@ func (e *Encoder) encodeTi() bool {
 			e.stringAt(1, "IATE", "IATI", "IABL", "IATO", "IARY") ||
 			e.stringAt(-5, "CHRISTIAN")) {
 
-		if e.stringAtStart(0, "ANTI") || e.stringStart("PATIO", "PITIA", "DUTIA") {
+		if e.stringAtStart(-2, "ANTI") || e.stringStart("PATIO", "PITIA", "DUTIA") {
 			e.metaphAdd('T')
 		} else if e.stringAt(-4, "EQUATION") {
 			e.metaphAdd('J')
@@ -2476,7 +2495,7 @@ func (e *Encoder) encodeVowels() {
 	}
 
 	if !(!e.isVowelAt(-2) && e.stringAt(-1, "LEWA", "LEWO", "LEWI")) {
-		e.idx = e.skipVowels(e.idx)
+		e.idx = e.skipVowels(e.idx + 1)
 	}
 }
 
@@ -2585,7 +2604,7 @@ func (e *Encoder) encodeEPronouncedAtEnd() bool {
 			// if a vowel is before the 'E', vowel eater will have eaten it.
 			//otherwise, consonant + 'E' will need 'E' pronounced
 			len(e.in) == 2 ||
-			(len(e.in) == 3 && !e.isVowelAt(0)) ||
+			(len(e.in) == 3 && !e.isVowelAt(-e.idx)) ||
 			// these german name endings can be relied on to have the 'e' pronounced
 			(e.stringAtEnd(-2, "BKE", "DKE", "FKE", "KKE", "LKE", "NKE", "MKE", "PKE", "TKE", "VKE", "ZKE") &&
 				!e.stringStart("FINKE", "FUNKE", "FRANKE")) ||
@@ -2977,6 +2996,9 @@ func (e *Encoder) metaphAddAlt(prim, second rune) {
 	if prim != unicode.ReplacementChar {
 		// don't dupe added A's
 		if !(prim == 'A' && len(e.primBuf) > 0 && e.primBuf[len(e.primBuf)-1] == 'A') {
+			if debug {
+				fmt.Printf("Append Prim: %v at %v\n", string(prim), string(e.in[0:e.idx+1]))
+			}
 			e.primBuf = append(e.primBuf, prim)
 		}
 	}
@@ -2984,6 +3006,9 @@ func (e *Encoder) metaphAddAlt(prim, second rune) {
 	if second != unicode.ReplacementChar {
 		// don't dupe added A's
 		if !(second == 'A' && len(e.secondBuf) > 0 && e.secondBuf[len(e.secondBuf)-1] == 'A') {
+			if debug {
+				fmt.Printf("Append Alt: %v at %v\n", string(second), string(e.in[0:e.idx+1]))
+			}
 			e.secondBuf = append(e.secondBuf, second)
 		}
 	}
@@ -2993,11 +3018,17 @@ func (e *Encoder) metaphAddAlt(prim, second rune) {
 func (e *Encoder) metaphAddStr(prim, second string) {
 	// don't dupe added A's
 	if !(prim == "A" && len(e.primBuf) > 0 && e.primBuf[len(e.primBuf)-1] == 'A') {
+		if debug {
+			fmt.Printf("Append Prim: %v at %v\n", prim, string(e.in[0:e.idx+1]))
+		}
 		e.primBuf = append(e.primBuf, []rune(prim)...)
 	}
 
 	// don't dupe added A's
-	if !(second == "A" && len(e.secondBuf) > 0 && e.secondBuf[len(e.secondBuf)-1] == 'A') {
+	if second != "" && !(second == "A" && len(e.secondBuf) > 0 && e.secondBuf[len(e.secondBuf)-1] == 'A') {
+		if debug {
+			fmt.Printf("Append Alt: %v at %v\n", second, string(e.in[0:e.idx+1]))
+		}
 		e.secondBuf = append(e.secondBuf, []rune(second)...)
 	}
 }
@@ -3046,14 +3077,18 @@ func (e *Encoder) skipVowels(at int) int {
 			off++
 		}
 
-		if at+off > e.lastIdx {
+		if e.idx+off > e.lastIdx {
 			break
 		}
 
-		it = e.in[at+off]
+		it = e.in[e.idx+off]
 	}
 
-	return at + off - 1
+	if off < 1 {
+		panic("bug: skipping vowels moving backward")
+	}
+
+	return e.idx + off - 1
 }
 
 func (e *Encoder) advanceCounter(noEncodeVowel, encodeVowel int) {

@@ -31,12 +31,13 @@ func TestBasicWords(t *testing.T) {
 }
 
 func TestHarness(t *testing.T) {
+	//debug = true
 	e := &Encoder{
 		EncodeVowels: true,
 	}
-	out1, _ := e.Encode("Aileen")
-	if out1 != "ALAN" {
-		t.Fail()
+	out, _ := e.Encode("Zollner")
+	if want, got := "SALNAR", out; want != got {
+		t.Fatalf("want: %v, got %v", want, got)
 	}
 }
 
@@ -79,7 +80,7 @@ func TestNameFiles(t *testing.T) {
 			in := line[0]
 
 			// skip if there's an S or G, since those aren't fully done yet (another 1500 lines)
-			if strings.Contains(in, "S") || strings.Contains(in, "G") {
+			if strings.ContainsAny(in, "Ss") || strings.ContainsAny(in, "Gg") {
 				continue
 			}
 
@@ -88,9 +89,9 @@ func TestNameFiles(t *testing.T) {
 			encodeSafe(t, "EncEV", encEV, in, line[3], line[4], &encEVErr)
 			encodeSafe(t, "EncE", encE, in, line[5], line[6], &encEErr)
 			encodeSafe(t, "EncV", encV, in, line[7], line[8], &encVErr)
-			if t.Failed() {
-				t.FailNow()
-			}
+			//if t.Failed() {
+			//	t.FailNow()
+			//}
 		}
 
 		// now we're done with reading the file, output stats
@@ -121,7 +122,7 @@ func encodeSafe(t *testing.T, name string, e *Encoder, in, main, alt string, err
 		t.Errorf("Error Encoding '%v' with %v.  Out1 want '%v' got '%v'", in, name, main, out1)
 	}
 	if alt != out2 {
-		t.Errorf("Error Encoding '%v' with %v.  Out2 want '%v' got '%v'", in, name, main, out2)
+		t.Errorf("Error Encoding '%v' with %v.  Out2 want '%v' got '%v'", in, name, alt, out2)
 	}
 
 	if main != out1 || alt != out2 {

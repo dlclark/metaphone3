@@ -8,6 +8,12 @@ func TestStringAt_Basic(t *testing.T) {
 	}
 }
 
+func TestStringAt_Calver(t *testing.T) {
+	if want, got := true, testStringAt("CALVER", 2, -2, "POLKA", "PALKO", "HALVA", "HALVO", "SALVER", "CALVER"); want != got {
+		t.Fatalf("StringAt error, wanted %v got %v", want, got)
+	}
+}
+
 func TestStringStart_Basic(t *testing.T) {
 	if want, got := true, testStringStart("TESTING", 1, "B", "E", "TEST"); want != got {
 		t.Fatalf("StringStart error, wanted %v got %v", want, got)

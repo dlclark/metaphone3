@@ -339,10 +339,12 @@ public class Metaphone3 {
 	 */
 	void MetaphAdd(String in) {
 		if (!(in.equals("A") && (m_primary.length() > 0) && (m_primary.charAt(m_primary.length() - 1) == 'A'))) {
+			System.out.printf("Append Prim: %s at %s\n", in, m_inWord.substring(0, m_current+1));
 			m_primary.append(in);
 		}
 
 		if (!(in.equals("A") && (m_secondary.length() > 0) && (m_secondary.charAt(m_secondary.length() - 1) == 'A'))) {
+			System.out.printf("Append Alt: %s at %s\n", in, m_inWord.substring(0, m_current+1));
 			m_secondary.append(in);
 		}
 	}
@@ -358,11 +360,13 @@ public class Metaphone3 {
 	 */
 	void MetaphAdd(String main, String alt) {
 		if (!(main.equals("A") && (m_primary.length() > 0) && (m_primary.charAt(m_primary.length() - 1) == 'A'))) {
+			System.out.printf("Append Prim: %s at %s\n", main, m_inWord.substring(0, m_current+1));
 			m_primary.append(main);
 		}
 
 		if (!(alt.equals("A") && (m_secondary.length() > 0) && (m_secondary.charAt(m_secondary.length() - 1) == 'A'))) {
 			if (!alt.isEmpty()) {
+				System.out.printf("Append Alt: %s at %s\n", alt, m_inWord.substring(0, m_current+1));
 				m_secondary.append(alt);
 			}
 		}
@@ -745,6 +749,8 @@ public class Metaphone3 {
 			if (m_current >= m_length) {
 				break;
 			}
+			char c = CharAt(m_current);
+			System.out.printf("Processing %s\n", c);
 
 			switch (CharAt(m_current)) {
 			case 'B':
@@ -3603,7 +3609,8 @@ public class Metaphone3 {
 						&& !(StringAt((m_current - 3), 7, "GUILLOT", "GUILLOR", "GUILLEN", "")
 								|| (StringAt(0, 5, "GUILL", "") && (m_length == 5))))
 				// e.g. "brouillard", "gremillion"
-				|| StringAt(0, 7, "BROUILL", "GREMILL", "ROBILL", "")
+				|| StringAt(0, 7, "BROUILL", "GREMILL", "")
+				|| StringAt(0, 6, "ROBILL", "")
 				// e.g. 'mireille'
 				|| (StringAt((m_current - 2), 5, "EILLE", "") && ((m_current + 2) == m_last)
 				// exception "reveille" usually pronounced as 're-vil-lee'
@@ -6081,6 +6088,9 @@ public class Metaphone3 {
 		 m3v.SetEncodeVowels(true);
 		 m3e.SetEncodeExact(true);
 
+		 m3v.SetWord(args[0]);
+		 m3v.Encode();
+
 		/*
 		 * m3.SetWord("iron");
 		 * 
@@ -6151,7 +6161,7 @@ public class Metaphone3 {
 		 * m3.GetAlternateMetaph());
 		 */
 
-		try {
+		/*try {
 			// Open the file that is the first
 			// command line parameter
 			FileInputStream fstream = new FileInputStream(args[0]);
@@ -6193,6 +6203,6 @@ public class Metaphone3 {
 			in.close();
 		} catch (Exception e) {// Catch exception if any
 			System.err.println("Error: " + e.getMessage());
-		}
+		}*/
 	}
 }
