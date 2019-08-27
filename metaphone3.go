@@ -724,7 +724,7 @@ func (e *Encoder) encodeCs() bool {
 		return true
 	}
 
-	if e.stringAt(-1, "ACS") && !e.stringAtEnd(-4, "ISAACS") {
+	if e.stringAtEnd(-1, "ACS") && !e.stringAt(-4, "ISAACS") {
 		e.metaphAdd('X')
 		e.idx++
 		return true
@@ -1121,7 +1121,7 @@ func (e *Encoder) encodeSpanishJ2() bool {
 
 func (e *Encoder) encodeJAsVowel() bool {
 	if e.stringAt(0, "JEWSK") {
-		e.metaphAdd('J')
+		e.metaphAddAlt('J', unicode.ReplacementChar)
 		return true
 	}
 
@@ -1860,13 +1860,466 @@ func (e *Encoder) encodeVowelReTransposition() bool {
 
 //650
 func (e *Encoder) encodeS() {
-	//TODO: special cases
+	if e.encodeSkj() || e.encodeSpecialSw() || e.encodeSj() || e.encodeSilentFrenchSFinal() ||
+		e.encodeSilentFrenchSInternal() || e.encodeIsl() || e.encodeStl() || e.encodeChristmas() ||
+		e.encodeSthm() || e.encodeIsten() || e.encodeSugar() || e.encodeSh() || e.encodeSch() ||
+		e.encodeSur() || e.encodeSu() || e.encodeSsio() || e.encodeSs() || e.encodeSia() ||
+		e.encodeSio() || e.encodeAnglicisations() || e.encodeSc() || e.encodeSeiSuiSier() ||
+		e.encodeSea() {
+		return
+	}
 
 	e.metaphAdd('S')
 
 	if e.stringAt(1, "S", "Z") && !e.stringAt(1, "SH") {
 		e.idx++
 	}
+}
+
+func (e *Encoder) encodeSkj() bool {
+	if e.stringAt(0, "SKJO", "SKJU") && e.isVowelAt(3) {
+		e.metaphAdd('X')
+		e.idx += 2
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSpecialSw() bool {
+	if e.idx == 0 {
+		if e.namesBeginningWithSwThatGetAltSv() {
+			e.metaphAddStr("S", "SV")
+			e.idx++
+			return true
+		}
+
+		if e.namesBeginningWithSwThatGetAlvXV() {
+			e.metaphAddStr("S", "XV")
+			e.idx++
+			return true
+		}
+	}
+	return false
+}
+
+func (e *Encoder) namesBeginningWithSwThatGetAltSv() bool {
+	return e.stringStart("SWANSON", "SWENSON", "SWINSON", "SWENSEN", "SWOBODA",
+		"SWIDERSKI", "SWARTHOUT", "SWEARENGIN")
+}
+
+func (e *Encoder) namesBeginningWithSwThatGetAlvXV() bool {
+	return e.stringStart("SWART", "SWARTZ", "SWARTS", "SWIGER",
+		"SWITZER", "SWANGER", "SWIGERT", "SWIGART", "SWIHART",
+		"SWEITZER", "SWATZELL", "SWINDLER", "SWINEHART", "SWEARINGEN")
+}
+
+func (e *Encoder) encodeSj() bool {
+	if e.stringStart("SJ") {
+		e.metaphAdd('X')
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSilentFrenchSFinal() bool {
+	// "louis" is an exception because it gets two pronuncuations
+	if e.stringExact("LOUIS") {
+		e.metaphAddAlt('S', unicode.ReplacementChar)
+		return true
+	}
+
+	if e.idx == e.lastIdx &&
+		((e.stringStart("YVES", "ARKANSAS", "FRANCAIS", "CRUDITES", "BRUYERES",
+			"DESCARTES", "DESCHUTES", "DESCHAMPS", "DESROCHES", "DESCHENES",
+			"RENDEZVOUS", "CONTRETEMPS", "DESLAURIERS") ||
+			e.stringExact("HORS") ||
+			e.stringEnd("CAMUS", "YPRES",
+				"MESNES", "DEBRIS", "BLANCS", "INGRES", "CANNES",
+				"CHABLIS", "APROPOS", "JACQUES", "ELYSEES", "OEUVRES", "GEORGES", "DESPRES")) ||
+			(e.stringAt(-2, "AI", "OI", "UI") && !e.stringStart("LOIS", "LUIS"))) {
+
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSilentFrenchSInternal() bool {
+	// french words familiar to americans where internal s is silent
+	return e.stringAt(-2, "MESNES", "DESCHAM", "DESPRES", "DESROCH", "DESROSI", "DESJARD", "DESMARA",
+		"DESCHEN", "DESHOTE", "DESLAUR", "DESCARTES") ||
+		e.stringAt(-5, "DUQUESNE", "DUCHESNE") ||
+		e.stringAt(-3, "FRESNEL", "GROSVENOR") ||
+		e.stringAt(-4, "LOUISVILLE") ||
+		e.stringAt(-7, "BEAUCHESNE", "ILLINOISAN")
+}
+
+func (e *Encoder) encodeIsl() bool {
+	// special cases 'island', 'isle', 'carlisle', 'carlysle'
+	return (e.stringAt(-2, "LISL", "LYSL", "AISL") &&
+		!e.stringAt(-3, "PAISLEY", "BAISLEY", "ALISLAM", "ALISLAH", "ALISLAA")) ||
+		(e.idx == 1 && (e.stringAt(-1, "ISLE", "ISLAN") && !e.stringAt(-1, "ISLEY", "ISLER")))
+}
+
+func (e *Encoder) encodeStl() bool {
+	// 'hustle', 'bustle', 'whistle'
+	if (e.stringAt(0, "STLE", "STLI") && !e.stringAt(2, "LESS", "LIKE", "LINE")) ||
+		e.stringAt(-3, "THISTLY", "BRISTLY", "GRISTLY") ||
+		// e.g. "corpuscle"
+		e.stringAt(-1, "USCLE") {
+
+		// KRISTEN, KRYSTLE, CRYSTLE, KRISTLE all pronounce the 't'
+		// also, exceptions where "-LING" is a nominalizing suffix
+		if e.stringStart("KRISTEN", "KRYSTLE", "CRYSTLE", "KRISTLE", "CHRISTENSEN", "CHRISTENSON") ||
+			e.stringAt(-3, "FIRSTLING") ||
+			e.stringAt(-2, "NESTLING", "WESTLING") {
+			e.metaphAddStr("ST", "ST")
+			e.idx++
+		} else {
+			if e.EncodeVowels && e.charAt(3, 'E') && !e.charAt(4, 'R') &&
+				!e.stringAt(3, "EY", "ETTE", "ETTA") {
+
+				e.metaphAddStr("SAL", "SAL")
+				e.flagAlInversion = true
+			} else {
+				e.metaphAddStr("SL", "SL")
+			}
+			e.idx += 2
+		}
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeChristmas() bool {
+	if e.stringAt(-4, "CHRISTMA") {
+		e.metaphAddStr("SM", "SM")
+		e.idx += 2
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSthm() bool {
+	// 'asthma', 'isthmus'
+	if e.stringAt(0, "STHM") {
+		e.metaphAddStr("SM", "SM")
+		e.idx += 3
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeIsten() bool {
+	// 't' is silent in verb, pronounced in name
+	if e.stringStart("CHRISTEN") {
+		if rootOrInflections(e.in, "CHRISTEN") || e.stringStart("CHRISTENDOM") {
+			e.metaphAddStr("S", "ST")
+		} else {
+			e.metaphAddStr("ST", "ST")
+		}
+		e.idx++
+		return true
+	}
+
+	// e.g. 'glisten', 'listen'
+	if e.stringAt(-2, "LISTEN", "RISTEN", "HASTEN", "FASTEN", "MUSTNT") || e.stringAt(-3, "MOISTEN") {
+		e.metaphAdd('S')
+		e.idx++
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeSugar() bool {
+	if e.stringAt(0, "SUGAR") {
+		e.metaphAdd('X')
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSh() bool {
+	if e.stringAt(0, "SH") {
+		// exception
+		if e.stringAt(-2, "CASHMERE") {
+			e.metaphAdd('J')
+			e.idx++
+			return true
+		}
+
+		// combining forms, e.g. 'clotheshorse', 'woodshole'
+		if e.idx > 0 &&
+			(e.stringAtEnd(1, "HAP") ||
+				// e.g. "hartsheim", "clothshorse"
+				// e.g. "dishonor"
+				e.stringAt(1, "HEIM", "HOEK", "HOLM", "HOLZ", "HOOD", "HEAD", "HEID",
+					"HAAR", "HORS", "HOLE", "HUND", "HELM", "HAWK", "HILL", "HEART", "HATCH", "HOUSE", "HOUND", "HONOR") ||
+				// e.g. "mishear"
+				e.stringAtEnd(2, "EAR") ||
+				// e.g. "hartshorn"
+				(e.stringAt(2, "ORN") && !e.stringAt(-2, "UNSHORN")) ||
+				// e.g. "newshour" but not "bashour", "manshour"
+				(e.stringAt(1, "HOUR") && !e.stringStart("ASHOUR", "BASHOUR", "MANSHOUR")) ||
+				// e.g. "dishonest", "grasshopper"
+				e.stringAt(2, "ARMON", "ONEST", "ALLOW", "OLDER", "OPPER", "EIMER",
+					"ANDLE", "ONOUR", "ABILLE", "UMANCE", "ABITUA")) {
+			if !e.stringAt(-1, "S") {
+				e.metaphAdd('S')
+			}
+		} else {
+			e.metaphAdd('X')
+		}
+
+		e.idx++
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeSch() bool {
+	// these words were combining forms many centuries ago
+	if e.stringAt(1, "CH") {
+		if e.idx > 0 &&
+			// e.g. "mischief", "escheat"
+			(e.stringAt(3, "IEF", "EAT", "ANCE", "ARGE") ||
+				e.stringStart("ESCHEW")) {
+
+			e.metaphAdd('S')
+			return true
+		}
+
+		// Schlesinger's rule
+		// dutch, danish, italian, greek origin, e.g. "school", "schooner", "schiavone",
+		// "schiz-"
+		if (e.stringAt(3, "OO", "ER", "EN", "UY", "ED", "EM", "IA", "IZ", "IS", "OL") &&
+			!e.stringAt(0, "SCHOLT", "SCHISL", "SCHERR")) ||
+			e.stringAt(3, "ISZ") ||
+			(e.stringAt(-1, "ESCHAT", "ASCHIN", "ASCHAL", "ISCHAE", "ISCHIA") &&
+				!e.stringAt(-2, "FASCHING")) ||
+			e.stringAtEnd(-1, "ESCHI") ||
+			e.charAt(3, 'Y') {
+			// e.g. "schermerhorn", "schenker", "schistose"
+
+			if e.stringAt(3, "ER", "EN", "IS") &&
+				(e.idx+4 == e.lastIdx || e.stringAt(3, "ENK", "ENB", "IST")) {
+
+				e.metaphAddStr("X", "SK")
+			} else {
+				e.metaphAddStr("SK", "SK")
+			}
+
+			e.idx += 2
+			return true
+		} else {
+			e.metaphAdd('X')
+			e.idx += 2
+			return true
+		}
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeSur() bool {
+	// 'erasure', 'usury'
+	if e.stringAt(1, "URE", "URA", "URY") {
+		// 'sure', 'ensure'
+		if e.idx == 0 || e.stringAt(-1, "N", "K") || e.stringAt(-2, "NO") {
+			e.metaphAdd('X')
+		} else {
+			e.metaphAdd('J')
+		}
+
+		e.advanceCounter(1, 0)
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSu() bool {
+	// 'sensuous', 'consensual'
+	if e.stringAt(1, "UO", "UA") && e.idx != 0 {
+		// exceptions e.g. "persuade"
+		if e.stringAt(-1, "RSUA") {
+			e.metaphAdd('S')
+		} else if e.isVowelAt(-1) {
+			// exceptions e.g. "casual"
+			e.metaphAddAlt('J', 'S')
+		} else {
+			e.metaphAddAlt('X', 'S')
+		}
+
+		e.advanceCounter(2, 0)
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSsio() bool {
+	if e.stringAt(1, "SION") {
+		// "abcission"
+		if e.stringAt(-2, "CI") {
+			e.metaphAdd('J')
+		} else if e.isVowelAt(-1) {
+			// 'mission'
+			e.metaphAdd('X')
+		}
+
+		e.advanceCounter(3, 1)
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSs() bool {
+	// e.g. "russian", "pressure"
+	// e.g. "hessian", "assurance"
+	if e.stringAt(-1, "USSIA", "ESSUR", "ISSUR", "ISSUE", "ESSIAN", "ASSURE", "ASSURA", "ISSUAB", "ISSUAN", "ASSIUS") {
+		e.metaphAdd('X')
+		e.advanceCounter(2, 1)
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSia() bool {
+	// e.g. "controversial", also "fuchsia", "ch" is silent
+	if e.stringAt(-2, "CHSIA") || e.stringAt(-1, "RSIAL") {
+		e.metaphAdd('X')
+		e.advanceCounter(2, 0)
+		return true
+	}
+
+	// names generally get 'X' where terms, e.g. "aphasia" get 'J'
+	if (e.stringAtStart(-3, "ALESIA", "ALYSIA", "ALISIA", "STASIA") && !e.stringStart("ANASTASIA")) ||
+		e.stringAt(-5, "THERESIA", "DIONYSIAN") {
+
+		e.metaphAddAlt('X', 'S')
+		e.advanceCounter(2, 0)
+		return true
+	}
+
+	if e.stringAtEnd(0, "SIA", "SIAN") || e.stringAt(-5, "AMBROSIAL") {
+		if (e.isVowelAt(-1) || e.stringAt(-1, "R")) &&
+			// exclude compounds based on names, or french or greek words
+			!(e.stringStart("JAMES", "NICOS", "PEGAS", "PEPYS",
+				"HOBBES", "HOLMES", "JAQUES", "KEYNES",
+				"MALTHUS", "HOMOOUS", "MAGLEMOS", "HOMOIOUS",
+				"LEVALLOIS", "TARDENOIS") || e.stringAt(-4, "ALGES")) {
+
+			e.metaphAdd('J')
+		} else {
+			e.metaphAdd('S')
+		}
+
+		e.advanceCounter(1, 0)
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeSio() bool {
+	// special case, irish name
+	if e.stringStart("SIOBHAN") {
+		e.metaphAdd('X')
+		e.advanceCounter(2, 0)
+		return true
+	}
+	if e.stringAt(1, "ION") {
+		// e.g. "vision", "version"
+		if e.isVowelAt(-1) || e.stringAt(-2, "ER", "UR") {
+			e.metaphAdd('J')
+		} else {
+			// e.g. "declension"
+			e.metaphAdd('X')
+		}
+		e.advanceCounter(2, 0)
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeAnglicisations() bool {
+	// german & anglicisations, e.g. 'smith' match 'schmidt', 'snider' match
+	// 'schneider'
+	// also, -sz- in slavic language altho in hungarian it is pronounced 's'
+
+	if e.stringAtStart(0, "SM", "SN", "SL") || e.stringAt(1, "Z") {
+		e.metaphAddAlt('S', 'X')
+
+		// eat redundant 'Z'
+		if e.stringAt(1, "Z") {
+			e.idx++
+		}
+
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeSc() bool {
+	if e.stringAt(0, "SC") {
+		// exception 'viscount'
+		if e.stringAt(-2, "VISCOUNT") {
+			return true
+		}
+
+		// encode "-SC<front vowel>-"
+		if e.stringAt(2, "I", "E", "Y") {
+			// e.g. "conscious"
+			// e.g. "prosciutto"
+			if e.stringAt(2, "IUT", "IOUS") || e.stringAt(-2, "FASCIS") ||
+				e.stringAt(-3, "CONSCIEN", "CRESCEND", "CONSCION") || e.stringAt(-4, "OMNISCIEN") {
+				e.metaphAdd('X')
+			} else if e.stringAt(0, "SCIVV", "SCIRO", "SCIPIO", "SCEPTIC", "SCEPSIS") ||
+				e.stringAt(-2, "PISCITELLI") {
+				e.metaphAddStr("SK", "SK")
+			} else {
+				e.metaphAdd('S')
+			}
+
+			e.idx++
+			return true
+		}
+
+		e.metaphAddStr("SK", "SK")
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSeiSuiSier() bool {
+	// "nausea" by itself has => NJ as a more likely encoding. Other forms
+	// using "nause-" (see Encode_SEA()) have X or S as more familiar
+	// pronounciations
+	if e.stringAtEnd(-3, "NAUSEA") ||
+		e.stringAt(-2, "CASUI") ||
+		(e.stringAt(-1, "OSIER", "ASIER") &&
+			!(e.stringStart("OSIER", "EASIER") || e.stringAt(-2, "ROSIER", "MOSIER"))) {
+
+		e.metaphAddAlt('J', 'X')
+		e.advanceCounter(2, 0)
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeSea() bool {
+	//TODO: bug?  NAUSEO and not NAUSEAT?
+	if e.stringExact("SEAN") || (e.stringAt(-3, "NAUSEO") && !e.stringAt(-3, "NAUSEAT")) {
+		e.metaphAdd('X')
+		e.advanceCounter(2, 0)
+		return true
+	}
+	return false
 }
 
 func (e *Encoder) encodeT() {
@@ -2250,8 +2703,8 @@ func (e *Encoder) encodeEasternEuropeanW() bool {
 	// Arnow should match Arnoff
 	if (e.idx == e.lastIdx && e.isVowelAt(-1)) ||
 		e.stringAt(-1, "EWSKI", "EWSKY", "OWSKI", "OWSKY") ||
-		e.stringAtEnd(0, "WICKI", "WACKI") ||
-		(e.stringAt(0, "WIAK") && (e.idx+3 == e.lastIdx || e.stringStart("SCH"))) {
+		e.stringAtEnd(0, "WIAK", "WICKI", "WACKI") ||
+		e.stringStart("SCH") {
 
 		e.metaphAddExactApproxAlt("", "V", "", "F")
 		return true
@@ -2441,12 +2894,13 @@ func (e *Encoder) encodeFrenchEz() bool {
 
 //Encode cases where "-Z-" is in a german word where Z => TS in german
 func (e *Encoder) encodeGermanZ() bool {
-	if e.stringExact("NAZI") || e.stringAt(-2, "NAZIFY", "MOZART") ||
+	if e.stringExact("NAZI") ||
+		e.stringAt(-2, "NAZIFY", "MOZART") ||
 		e.stringAt(-3, "HOLZ", "HERZ", "MERZ", "FITZ", "HERZOG") ||
 		(e.stringAt(-3, "GANZ") && !e.isVowelAt(1)) ||
 		e.stringAt(-4, "STOLZ", "PRINZ", "VENEZIA") ||
-		// german words beginning with "sch-" but not schlimazel, schmooze
-		(e.stringStart("SCH") && !e.stringEnd("IZE", "OZE", "ZEL")) ||
+		// german words containing with "sch" but not schlimazel, schmooze
+		(e.stringContains("SCH") && !e.stringEnd("IZE", "OZE", "ZEL")) ||
 		(e.idx > 0 && e.stringAt(0, "ZEIT")) ||
 		e.stringAt(-3, "WEIZ") {
 
@@ -2554,7 +3008,7 @@ func (e *Encoder) encodeEPronounced() {
 
 func (e *Encoder) encodeOSilent() bool {
 	// if "iron" at beginning or end of word and not "irony"
-	if e.charAt(0, 'O') {
+	if e.charAt(0, 'O') && e.stringAt(-2, "IRON") {
 		if (e.stringStart("IRON") || e.stringAtEnd(-2, "IRON")) && !e.stringAt(-2, "IRONIC") {
 			return true
 		}
@@ -2979,6 +3433,38 @@ nextVal:
 	}
 
 	// if we make it here we've tried all vals and failed
+	return false
+}
+
+// val must be all caps and not be blank
+func (e *Encoder) stringContains(val string) bool {
+
+	lastPossibleStart := len(e.in) - len(val)
+	// simple bounds check
+	if lastPossibleStart < 0 {
+		return false
+	}
+
+	// each letter in our input
+	for i := 0; i <= lastPossibleStart; i++ {
+		// check that against our search val
+		// keep checking until we run out of letters in our search val
+
+		tmp := i
+		for _, c := range val {
+			if e.in[tmp] != c {
+				// we're done with this iteration
+				break
+			}
+			// next character in our input
+			tmp++
+		}
+		// if we matched all our search val then we're done
+		if tmp-i == len(val) {
+			return true
+		}
+	}
+
 	return false
 }
 

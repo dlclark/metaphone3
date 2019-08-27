@@ -1865,7 +1865,7 @@ public class Metaphone3 {
 					|| StringAt(m_current, 5, "CIENT", "CIENC", "CIOUS", "CIATE", "CIATI", "CIATO", "CIABL", "CIARY",
 							"")
 					|| (((m_current + 2) == m_last) && StringAt(m_current, 3, "CIA", "CIO", ""))
-					|| (((m_current + 3) == m_last) && StringAt(m_current, 3, "CIAS", "CIOS", "")))
+					|| (((m_current + 3) == m_last) && StringAt(m_current, 4, "CIAS", "CIOS", "")))
 					// exceptions
 					&& !(StringAt((m_current - 4), 11, "ASSOCIATION", "") || StringAt(0, 4, "OCIE", "")
 					// exceptions mostly because these names are usually from
@@ -6037,7 +6037,7 @@ public class Metaphone3 {
 						"JULIO", "JINNY", "JOHNS", "JACOB", "JETER", "JAFFE", "JESKE", "JANKE", "JAGER", "JANIK",
 						"JANDA", "JOSHI", "JULES", "JANTZ", "JEANS", "JUDAH", "JANUS", "JENNY", "JENEE", "JONAH",
 						"JONAS", "JACOB", "JOSUE", "JOSEF", "JULES", "JULIE", "JULIA", "JANIE", "JANIS", "JENNA",
-						"JANNA", "JEANA", "JENNI", "JEANE", "JONNA", "")
+						"JANNA", "JEANA", "JENNI", "JEANE", "JONNA", "JAKOB", "")
 				|| StringAt(0, 6, "JORDAN", "JORDON", "JOSEPH", "JOSHUA", "JOSIAH", "JOSPEH", "JUDSON", "JULIAN",
 						"JULIUS", "JUNIOR", "JUDITH", "JOESPH", "JOHNIE", "JOANNE", "JEANNE", "JOANNA", "JOSEFA",
 						"JULIET", "JANNIE", "JANELL", "JASMIN", "JANINE", "JOHNNY", "JEANIE", "JEANNA", "JOHNNA",
@@ -6048,7 +6048,7 @@ public class Metaphone3 {
 						"JULIAN", "JAEGER", "JACOBY", "JENSON", "JARMAN", "JOSLIN", "JESSEN", "JAHNKE", "JACOBO",
 						"JULIEN", "JOSHUA", "JEPSON", "JULIUS", "JANSON", "JACOBI", "JUDSON", "JARBOE", "JOHSON",
 						"JANZEN", "JETTON", "JUNKER", "JONSON", "JAROSZ", "JENNER", "JAGGER", "JASMIN", "JEPSEN",
-						"JORDEN", "JANNEY", "JUHASZ", "JERGEN", "JAKOB", "")
+						"JORDEN", "JANNEY", "JUHASZ", "JERGEN",  "")
 				|| StringAt(0, 7, "JOHNSON", "JOHNNIE", "JASMINE", "JEANNIE", "JOHANNA", "JANELLE", "JANETTE",
 						"JULIANA", "JUSTINA", "JOSETTE", "JOELLEN", "JENELLE", "JULIETA", "JULIANN", "JULISSA",
 						"JENETTE", "JANETTA", "JOSELYN", "JONELLE", "JESENIA", "JANESSA", "JAZMINE", "JEANENE",

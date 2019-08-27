@@ -9,5 +9,7 @@ The reference implementation of metaphone3 in Java can be found [here](https://g
 
 ## Differences from v2.1.3 Java Implementation
 - Fix ROBILL
-- Fix lengths for very long words where certain situations would cause primary 
-    to get too long and the secondary would get truncated.  (e.g. Villafranca when EncodeVowel is true)
+- Fix lengths for very long words where certain situations would cause the primary or secondary
+    to get too long and the other would get truncated.  (e.g. Villafranca when EncodeVowel is true)
+- Fix JAKOB
+- Fix ending CIAS and CIOS (e.g. MECIAS)

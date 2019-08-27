@@ -31,17 +31,18 @@ func TestBasicWords(t *testing.T) {
 }
 
 func TestHarness(t *testing.T) {
-	//debug = true
+	debug = false
 	e := &Encoder{
 		EncodeVowels: true,
 	}
-	out, _ := e.Encode("Zollner")
-	if want, got := "SALNAR", out; want != got {
+	out, _ := e.Encode("Ironhorse")
+	if want, got := "ARNARS", out; want != got {
 		t.Fatalf("want: %v, got %v", want, got)
 	}
 }
 
 func TestNameFiles(t *testing.T) {
+	debug = false
 	files, err := ioutil.ReadDir("testdata")
 	if err != nil {
 		t.Fatal(err)
@@ -79,8 +80,8 @@ func TestNameFiles(t *testing.T) {
 			}
 			in := line[0]
 
-			// skip if there's an S or G, since those aren't fully done yet (another 1500 lines)
-			if strings.ContainsAny(in, "Ss") || strings.ContainsAny(in, "Gg") {
+			// skip if there's a G, since that isn't fully done yet (another 800 lines)
+			if strings.ContainsAny(in, "Gg") {
 				continue
 			}
 
