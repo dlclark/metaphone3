@@ -2401,7 +2401,7 @@ func (e *Encoder) encodeVowelReTransposition() bool {
 	// e.g. "fibre" => FABAR or "centre" => SANTAR
 	if e.EncodeVowels && e.charNextIs('E') && len(e.in) > 3 &&
 		!e.stringStart("OUTRE", "LIBRE", "ANDRE") && !e.stringExact("FRED", "TRES") &&
-		!e.stringAt(-2, "LDRED", "LFRED", "NDRED", "NFRED", "NDRES", "TRES", "IFRED") &&
+		!e.stringAt(-2, "LDRED", "LFRED", "NDRED", "NFRED", "NDRES", "IFRED") && //"TRES" ?
 		!e.isVowelAt(-1) &&
 		(e.idx+1 == e.lastIdx || e.stringAtEnd(2, "D", "S")) {
 
