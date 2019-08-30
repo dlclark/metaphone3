@@ -865,13 +865,567 @@ func (e *Encoder) encodeF() {
 	e.metaphAdd('F')
 }
 
-//800
 func (e *Encoder) encodeG() {
-	//todo: special cases
+	if e.encodeSilentGAtBeginning() || e.encodeGg() || e.encodeGk() || e.encodeGh() || e.encodeSilentG() ||
+		e.encodeGn() || e.encodeGl() || e.encodeInitialGFrontVowel() || e.encodeNger() || e.encodeGer() ||
+		e.encodeGel() || e.encodeNonInitialGFrontVowel() || e.encodeGaToJ() {
+		return
+	}
 
 	if !e.stringAt(-1, "C", "K", "G", "Q") {
 		e.metaphAddExactApprox("G", "K")
 	}
+}
+
+func (e *Encoder) encodeSilentGAtBeginning() bool {
+	return e.stringAtStart(0, "GN")
+}
+
+func (e *Encoder) encodeGg() bool {
+	if e.charNextIs('G') {
+		// italian e.g, 'loggia', 'caraveggio', also 'suggest' and 'exaggerate'
+		if e.stringAt(-1, "AGGIA", "OGGIA", "AGGIO", "EGGIO", "EGGIA", "IGGIO") ||
+			// 'ruggiero' but not 'snuggies'
+			(e.stringAt(-1, "UGGIE") && !(e.idx+3 == e.lastIdx || e.idx+4 == e.lastIdx)) ||
+			e.stringAtEnd(-1, "AGGI", "OGGI") ||
+			e.stringAt(-2, "SUGGES", "XAGGER", "REGGIE") {
+
+			// expection where "-GG-" => KJ
+			if e.stringAt(-2, "SUGGEST") {
+				e.metaphAddExactApprox("G", "K")
+			}
+			e.metaphAdd('J')
+			e.advanceCounter(2, 1)
+		} else {
+			e.metaphAddExactApprox("G", "K")
+			e.idx++
+		}
+
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeGk() bool {
+	// 'gingko'
+	if e.charNextIs('K') {
+		e.metaphAdd('K')
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeGh() bool {
+	if e.charNextIs('H') {
+		if e.encodeGhAfterConsonant() || e.encodeInitialGh() || e.encodeGhToJ() || e.encodeGhToH() ||
+			e.encodeUght() || e.encodeGhHPartOfOtherWord() || e.encodeSilentGh() || e.encodeGhToF() {
+			return true
+		}
+
+		e.metaphAddExactApprox("G", "K")
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeGhAfterConsonant() bool {
+	// e.g. 'burgher', 'bingham'
+	if e.idx > 0 && !e.isVowelAt(-1) &&
+		// not e.g. 'greenhalgh'
+		!e.stringAtEnd(-3, "HALGH") {
+		e.metaphAddExactApprox("G", "K")
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeInitialGh() bool {
+	if e.idx == 0 {
+		// e.g. "ghislane", "ghiradelli"
+		if e.charAt(2, 'I') {
+			e.metaphAdd('J')
+		} else {
+			e.metaphAddExactApprox("G", "K")
+		}
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeGhToJ() bool {
+	// e.g., 'greenhalgh', 'dunkenhalgh', english names
+	if e.stringAtEnd(-2, "ALGH") {
+		e.metaphAddAlt('J', unicode.ReplacementChar)
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeGhToH() bool {
+	// special cases
+	// e.g., 'donoghue', 'donaghy'
+	if (e.stringAt(-4, "DONO", "DONA") && e.isVowelAt(2)) ||
+		e.stringAt(-5, "CALLAGHAN") {
+		e.metaphAdd('H')
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeUght() bool {
+	// e.g. "ought", "aught", "daughter", "slaughter"
+	if e.stringAt(-1, "UGHT") {
+		if (e.stringAt(-3, "LAUGH") && !(e.stringAt(-4, "SLAUGHT") || e.stringAt(-3, "LAUGHTO"))) ||
+			e.stringAt(-4, "DRAUGH") {
+
+			e.metaphAddStr("FT", "FT")
+		} else {
+			e.metaphAdd('T')
+		}
+
+		e.idx += 2
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeGhHPartOfOtherWord() bool {
+	// if the 'H' is the beginning of another word or syllable
+	if e.stringAt(1, "HOUS", "HEAD", "HOLE", "HORN", "HARN") {
+		e.metaphAddExactApprox("G", "K")
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSilentGh() bool {
+	// Parker's rule (with some further refinements) - e.g., 'hugh'
+	if ((e.stringAt(-2, "B", "H", "D", "G", "L") ||
+		// e.g., 'bough'
+		(e.stringAt(-3, "B", "H", "D", "K", "W", "N", "P", "V") && !e.stringStart("ENOUGH")) ||
+		// e.g., 'broughton'
+		// 'plough', 'slaugh'
+		e.stringAt(-4, "B", "H", "PL", "SL") ||
+		(e.idx > 0 && (e.charAt(-1, 'I') || e.stringStart("PUGH") ||
+			// e.g. 'MCDONAGH', 'MURTAGH', 'CREAGH'
+			e.stringAtEnd(-1, "AGH") || e.stringAt(-4, "GERAGH", "DRAUGH") ||
+			(e.stringAt(-3, "GAUGH", "GEOGH", "MAUGH") && !e.stringStart("MCGAUGHEY")) ||
+			// exceptions to 'tough', 'rough', 'lough'
+			(e.stringAt(-2, "OUGH") && e.idx > 3 && !e.stringAt(-4, "CCOUGH", "ENOUGH", "TROUGH", "CLOUGH"))))) &&
+		// suffixes starting w/ vowel where "-GH-" is usually silent
+		(e.stringAt(-3, "VAUGH", "FEIGH", "LEIGH") ||
+			e.stringAt(-2, "HIGH", "TIGH") ||
+			e.idx+1 == e.lastIdx ||
+			(e.stringAtEnd(2, "IE", "EY", "ES", "ER", "ED", "TY") && !e.stringAt(-5, "GALLAGHER")) ||
+			e.stringAtEnd(2, "Y", "ING", "ERTY") ||
+			(!e.isVowelAt(2) || e.stringAt(-3, "GAUGH", "GEOGH", "MAUGH") || e.stringAt(-4, "BROUGHAM")))) &&
+		// exceptions where '-g-' pronounced
+		!(e.stringStart("BALOGH", "SABAGH") || e.stringAt(-2, "BAGHDAD") ||
+			e.stringAt(-3, "WHIGH") || e.stringAt(-5, "SABBAGH", "AKHLAGH")) {
+		// silent - do nothing
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeGhSpecialCases() bool {
+	handled := false
+
+	// special case: 'hiccough' == 'hiccup'
+	if e.stringAt(-6, "HICCOUGH") {
+		e.metaphAdd('P')
+		handled = true
+	} else if e.stringStart("LOUGH") {
+		// special case: 'lough' alt spelling for scots 'loch'
+		e.metaphAdd('K')
+		handled = true
+	} else if e.stringStart("BALOGH") {
+		// hungarian
+		e.metaphAddExactApproxAlt("G", "", "K", "")
+		handled = true
+	} else if e.stringAt(-3, "LAUGHLIN", "COUGHLAN", "LOUGHLIN") {
+		// "maclaughlin"
+		e.metaphAddAlt('K', 'F')
+		handled = true
+	} else if e.stringAt(-3, "GOUGH") || e.stringAt(-7, "COLCLOUGH") {
+		e.metaphAddAlt(unicode.ReplacementChar, 'F')
+		handled = true
+	}
+
+	if handled {
+		e.idx++
+	}
+
+	return handled
+}
+
+func (e *Encoder) encodeGhToF() bool {
+	// the cases covered here would fall under
+	// the GH_To_F rule below otherwise
+	if e.encodeGhSpecialCases() {
+		return true
+	}
+
+	// e.g., 'laugh', 'cough', 'rough', 'tough'
+	if e.idx > 2 && e.charAt(-1, 'U') && e.isVowelAt(-2) &&
+		e.stringAt(-3, "C", "G", "L", "R", "T", "N", "S") &&
+		!e.stringAt(-4, "BREUGHEL", "FLAUGHER") {
+
+		e.metaphAdd('F')
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeSilentG() bool {
+	// e.g. "phlegm", "apothegm", "voigt"
+	if e.stringAtEnd(-1, "EGM", "IGM", "AGM") || e.stringAtEnd(0, "GT") || e.stringExact("HUGES") {
+		return true
+	}
+
+	// vietnamese names e.g. "Nguyen" but not "Ng"
+	if e.stringStart("NG") && e.idx != e.lastIdx {
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeGn() bool {
+	if e.charNextIs('N') {
+		// 'align' 'sign', 'resign' but not 'resignation'
+		// also 'impugn', 'impugnable', but not 'repugnant'
+		if (e.idx > 1 &&
+			((e.stringAt(-1, "I", "U", "E") ||
+				e.stringAt(-3, "CHAGNON", "LORGNETTE") ||
+				e.stringAt(-2, "COGNAC", "LAGNIAPPE") ||
+				e.stringAt(-4, "BOLOGN") ||
+				e.stringAt(-5, "COMPAGNIE")) &&
+				// Exceptions: following are cases where 'G' is pronounced
+				// in "assign" 'g' is silent, but not in "assignation"
+				!(e.stringAt(2, "ATE", "ITY", "ATOR", "ATION") ||
+					(e.stringAt(2, "AN", "AC", "IA", "UM") && !(e.stringAt(-3, "POIGNANT") || e.stringAt(-2, "COGNAC"))) ||
+					e.stringStart("SPIGNER", "STEGNER") ||
+					e.stringExact("SIGNE") ||
+					e.stringAt(-2, "LIGNI", "LIGNO", "REGNA", "DIGNI", "WEGNE", "TIGNE",
+						"RIGNE", "REGNE", "TIGNO", "SIGNAL", "SIGNIF", "SIGNAT") ||
+					e.stringAt(-1, "IGNIT")) &&
+				!e.stringAt(-2, "SIGNET", "LIGNEO"))) ||
+			// not e.g. 'cagney', 'magna'
+			(e.stringAtEnd(0, "GNE", "GNA") && !e.stringAt(-2, "SIGNA", "MAGNA", "SIGNE")) {
+			e.metaphAddExactApproxAlt("N", "GN", "N", "KN")
+		} else {
+			e.metaphAddExactApprox("GN", "KN")
+		}
+		e.idx++
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeGl() bool {
+	// 'tagliaro', 'puglia' BUT add K in alternative
+	// since americans sometimes do this
+	if e.stringAt(1, "LIA", "LIO", "LIE") && e.isVowelAt(-1) {
+		e.metaphAddExactApproxAlt("L", "GL", "L", "KL")
+		e.idx++
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeInitialGFrontVowel() bool {
+	if e.idx == 0 && e.frontVowel(1) {
+		// special case "gila" as in "gila monster"
+		if e.stringExact("GILA") {
+			e.metaphAdd('H')
+		} else if e.initialGSoft() {
+			e.metaphAddExactApproxAlt("J", "G", "J", "K")
+		} else if e.charNextIs('E') || e.charNextIs('I') {
+			e.metaphAddExactApproxAlt("G", "J", "K", "J")
+		} else {
+			e.metaphAddExactApprox("G", "K")
+		}
+
+		e.advanceCounter(1, 0)
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) initialGSoft() bool {
+	if (e.stringAt(1, "EL", "EM", "EN", "EO", "ER", "ES", "IA", "IN", "IO", "IP", "IU", "YM", "YN",
+		"YP", "YR", "EE", "IRA", "IRO") &&
+		// except for smaller set of cases where => K, e.g. "gerber"
+		!e.stringAt(1, "ELD", "ELT", "ERT", "INZ", "ERH", "ITE", "ERD", "ERL", "ERN", "INT",
+			"EES", "EEK", "ELB", "EER", "ERSH", "ERST", "INSB", "INGR", "EROW", "ERKE", "EREN",
+			"ELLER", "ERDIE", "ERBER", "ESUND", "ESNER", "INGKO", "INKGO",
+			"IPPER", "ESELL", "IPSON", "EEZER", "ERSON", "ELMAN",
+			"ESTALT", "ESTAPO", "INGHAM", "ERRITY", "ERRISH", "ESSNER", "ENGLER",
+			"YNAECOL", "YNECOLO", "ENTHNER", "ERAGHTY",
+			"INGERICH", "EOGHEGAN")) ||
+		(e.isVowelAt(1) &&
+			(e.stringAt(1, "EE ", "EEW") ||
+				(e.stringAt(1, "IGI", "IRA", "IBE", "AOL", "IDE", "IGL") &&
+					!e.stringAt(1, "IDEON")) ||
+				e.stringAt(1, "ILES", "INGI", "ISEL", "IBBER", "IBBET", "IBLET", "IBRAN", "IGOLO", "IRARD", "IGANT",
+					"IRAFFE", "EEWHIZ", "ILLETTE", "IBRALTA") ||
+				(e.stringAt(1, "INGER") && !e.stringAt(1, "INGERICH")))) {
+
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) frontVowel(offset int) bool {
+	return e.charAt(offset, 'E') || e.charAt(offset, 'I') || e.charAt(offset, 'Y')
+}
+
+func (e *Encoder) encodeNger() bool {
+	if e.stringAt(-1, "NGER") {
+		// default 'G' => J such as 'ranger', 'stranger', 'manger', 'messenger',
+		// 'orangery', 'granger'
+		// 'boulanger', 'challenger', 'danger', 'changer', 'harbinger', 'lounger',
+		// 'ginger', 'passenger'
+		// except for these the following
+
+		if !(rootOrInflections(e.in, "ANGER") || rootOrInflections(e.in, "LINGER") ||
+			rootOrInflections(e.in, "MALINGER") || rootOrInflections(e.in, "FINGER") ||
+			(e.stringAt(-3, "HUNG", "FING", "BUNG", "WING", "RING", "DING", "ZENG", "ZING",
+				"JUNG", "LONG", "PING", "CONG", "MONG", "BANG", "GANG", "HANG", "LANG", "SANG", "SING",
+				"WANG", "ZANG") &&
+				// exceptions to above where 'G' => J
+				!(e.stringAt(-6, "BOULANG", "SLESING", "KISSING", "DERRING", "BARRING", "PHALANGER") ||
+					e.stringAt(-8, "SCHLESING") ||
+					e.stringAt(-5, "SALING", "BELANG") ||
+					e.stringAt(-4, "CHANG"))) ||
+			e.stringAt(-4, "STING", "YOUNG") || e.stringAt(-5, "STRONG") ||
+			e.stringStart("UNG", "ENG", "ING", "SENGER") ||
+			e.stringAt(0, "GERICH") ||
+			e.stringAt(-2, "ANGERLY", "ANGERBO", "INGERSO") ||
+			e.stringAt(-3, "WENGER", "MUNGER", "SONGER", "KINGER", "LINGERF") ||
+			e.stringAt(-4, "FLINGER", "SLINGER", "STANGER", "STENGER", "KLINGER", "CLINGER") ||
+			e.stringAt(-5, "SPRINGER", "SPRENGER")) {
+
+			e.metaphAddExactApproxAlt("J", "G", "J", "K")
+		} else {
+			e.metaphAddExactApproxAlt("G", "J", "K", "J")
+		}
+
+		e.advanceCounter(1, 0)
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeGer() bool {
+	if e.idx > 0 && e.stringAt(1, "ER") {
+		// Exceptions to 'GE' where 'G' => K
+		// e.g. "JAGER", "TIGER", "LIGER", "LAGER", "LUGER", "AUGER", "EAGER", "HAGER",
+		// "SAGER"
+		if ((e.idx == 2 && e.isVowelAt(-1) && !e.isVowelAt(-2) &&
+			!e.stringAt(-2, "PAGER", "WAGER", "NIGER", "ROGER", "LEGER", "CAGER") ||
+			e.stringAt(-2, "AUGER", "EAGER", "INGER", "YAGER")) ||
+			e.stringAt(-3, "SEEGER", "JAEGER", "GEIGER", "KRUGER", "SAUGER", "BURGER",
+				"MEAGER", "MARGER", "RIEGER", "YAEGER", "STEGER", "PRAGER", "SWIGER", "YERGER", "TORGER",
+				"FERGER", "HILGER", "ZEIGER", "YARGER", "COWGER", "CREGER", "KROGER", "KREGER", "GRAGER",
+				"STIGER", "BERGER") ||
+			// 'berger' but not 'bergerac'
+			e.stringAtEnd(-3, "BERGER") ||
+			e.stringAt(-4, "KREIGER", "KRUEGER", "METZGER", "KRIEGER", "KROEGER", "STEIGER",
+				"DRAEGER", "BUERGER", "BOERGER", "FIBIGER") ||
+			// e.g. 'harshbarger', 'winebarger'
+			(e.stringAt(-3, "BARGER") && e.idx > 4) ||
+			// e.g. 'weisgerber'
+			(e.stringAt(0, "GERBER") && e.idx > 0) ||
+			e.stringAt(-5, "SCHWAGER", "LYBARGER", "SPRENGER", "GALLAGER", "WILLIGER") ||
+			e.stringStart("HARGER") ||
+			e.stringExact("AGER", "EGER") ||
+			e.stringAt(-1, "YGERNE") ||
+			e.stringAt(-6, "SCHWEIGER")) &&
+			!(e.stringAt(-5, "BELLIGEREN") || e.stringStart("MARGERY") || e.stringAt(-3, "BERGERAC")) {
+
+			if e.isSlavoGermanic() {
+				e.metaphAddExactApprox("G", "K")
+			} else {
+				e.metaphAddExactApproxAlt("G", "J", "K", "J")
+			}
+		} else {
+			e.metaphAddExactApproxAlt("J", "G", "J", "K")
+		}
+
+		e.advanceCounter(1, 0)
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) encodeGel() bool {
+	// more likely to be "-GEL-" => JL
+	if e.stringAt(1, "EL") && e.idx > 0 {
+		// except for
+		// "BAGEL", "HEGEL", "HUGEL", "KUGEL", "NAGEL", "VOGEL", "FOGEL", "PAGEL"
+		if (len(e.in) == 5 && e.isVowelAt(-1) && !e.isVowelAt(-2) && !e.stringAt(-2, "NIGEL", "RIGEL")) ||
+			// or the following as combining forms
+			e.stringAt(-2, "ENGEL", "HEGEL", "NAGEL", "VOGEL") ||
+			e.stringAt(-3, "MANGEL", "WEIGEL", "FLUGEL", "RANGEL", "HAUGEN", "RIEGEL", "VOEGEL") ||
+			e.stringAt(-4, "SPEIGEL", "STEIGEL", "WRANGEL", "SPIEGEL", "DANEGELD") {
+
+			if e.isSlavoGermanic() {
+				e.metaphAddExactApprox("G", "K")
+			} else {
+				e.metaphAddExactApproxAlt("G", "J", "K", "J")
+			}
+		} else {
+			e.metaphAddExactApproxAlt("J", "G", "J", "K")
+		}
+
+		e.advanceCounter(1, 0)
+		return true
+	}
+
+	return false
+}
+
+//Encode "-G-" followed by a vowel when non-initial leter. Default for this is
+//a 'J' sound, so check exceptions where it is pronounced 'G'
+func (e *Encoder) encodeNonInitialGFrontVowel() bool {
+	// -gy-, gi-, ge-
+	if e.stringAt(1, "E", "I", "Y") {
+		// '-ge' at end
+		// almost always 'j 'sound
+		if e.stringAtEnd(0, "GE") {
+			// german names with hard g using GE at end
+			if e.stringStart("INGE", "LAGE", "HAGE", "LANGE", "SYNGE", "BENGE", "RUNGE", "HELGE",
+				"BYRGE", "BIRGE", "BERGE", "HAUGE", "RENEGE", "STONGE", "STANGE", "PRANGE", "KRESGE") {
+				if e.isSlavoGermanic() {
+					e.metaphAddExactApprox("G", "K")
+				} else {
+					e.metaphAddExactApproxAlt("G", "J", "K", "J")
+				}
+			} else {
+				e.metaphAdd('J')
+			}
+		} else {
+			if e.internalHardG() {
+				// don't encode KG or KK if e.g. "mcgill"
+				// todo: should this be !MAC as well?
+				if !e.stringAtStart(-2, "MC") || e.stringAtStart(-3, "MAC") {
+					if e.isSlavoGermanic() {
+						e.metaphAddExactApprox("G", "K")
+					} else {
+						e.metaphAddExactApproxAlt("G", "J", "K", "J")
+					}
+				}
+			} else {
+				e.metaphAddExactApproxAlt("J", "G", "J", "K")
+			}
+		}
+
+		e.advanceCounter(1, 0)
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) internalHardG() bool {
+	// if not "-GE" at end
+	if !(e.idx+1 == e.lastIdx && e.charNextIs('E')) &&
+		(e.internalHardNg() || e.internalHardGenGinGetGit() || e.internalHardGOpenSyllable() ||
+			e.internalHardGOther()) {
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) internalHardNg() bool {
+	if (e.stringAt(-3, "DANG", "FANG", "SING") && !e.stringAt(-5, "DISINGEN")) ||
+		e.stringStart("INGEB", "ENGEB") ||
+		(e.stringAt(-3, "RING", "WING", "HANG", "LONG") &&
+			!(e.stringAt(-4, "CRING", "FRING", "ORANG", "TWING", "CHANG", "PHANG") ||
+				e.stringAt(-5, "SYRING") ||
+				e.stringAt(-3, "RINGENC", "RINGENT", "LONGITU", "LONGEVI") ||
+				// e.g. 'longino', 'mastrangelo'
+				e.stringAtEnd(0, "GELO", "GINO"))) ||
+		(e.stringAt(-1, "NGY") &&
+			!(e.stringAt(-3, "RANGY", "MANGY", "MINGY") ||
+				e.stringAt(-4, "SPONGY", "STINGY"))) {
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) internalHardGenGinGetGit() bool {
+	if (e.stringAt(-3, "FORGET", "TARGET", "MARGIT", "MARGET", "TURGEN", "BERGEN", "MORGEN",
+		"JORGEN", "HAUGEN", "JERGEN", "JURGEN", "LINGEN", "BORGEN", "LANGEN", "KLAGEN", "STIGER", "BERGER") &&
+		!e.stringAt(0, "GENETIC", "GENESIS") && !e.stringAt(-4, "PLANGENT")) ||
+		e.stringAtEnd(-3, "BERGIN", "FEAGIN", "DURGIN") ||
+		(e.stringAt(-2, "ENGEN") && !e.stringAt(3, "DER", "ETI", "ESI")) ||
+		e.stringAt(-4, "JUERGEN") ||
+		e.stringStart("NAGIN", "MAGIN", "HAGIN") ||
+		e.stringExact("ENGIN", "DEGEN", "LAGEN", "MAGEN", "NAGIN") ||
+		(e.stringAt(-2, "BEGET", "BEGIN", "HAGEN", "FAGIN", "BOGEN", "WIGIN", "NTGEN", "EIGEN",
+			"WEGEN", "WAGEN") &&
+			!e.stringAt(-5, "OSPHAGEN")) {
+		return true
+	}
+	return false
+}
+
+func (e *Encoder) internalHardGOpenSyllable() bool {
+	return e.stringAt(1, "EYE") ||
+		e.stringAt(-2, "FOGY", "POGY", "YOGI", "MAGEE", "MCGEE", "HAGIO") ||
+		e.stringAt(-1, "RGEY", "OGEY") ||
+		e.stringAt(-3, "HOAGY", "STOGY", "PORGY") ||
+		e.stringAt(-5, "CARNEGIE") ||
+		e.stringAtEnd(-1, "OGEY", "OGIE")
+}
+
+func (e *Encoder) internalHardGOther() bool {
+	if (e.stringAt(0, "GETH", "GEAR", "GEIS", "GIRL", "GIVI", "GIVE", "GIFT", "GIRD", "GIRT", "GILV",
+		"GILD", "GELD") && !e.stringAt(-3, "GINGIV")) ||
+		// "gish" but not "largish"
+		(e.stringAt(1, "ISH") && e.idx > 0 && !e.stringStart("LARG")) ||
+		(e.stringAt(-2, "MAGED", "MEGID") && e.idx+2 != e.lastIdx) ||
+		e.stringAt(0, "GEZ") ||
+		e.stringStart("WEGE", "HAGE", "VOEGE", "BERGE", "HELGE", "INGEBORG", "CORREGIDOR") ||
+		(e.stringAtEnd(-2, "ONGEST", "UNGEST") && !e.stringAt(-3, "CONGEST")) ||
+		e.stringExact("ENGE", "BOGY") ||
+		e.stringAt(0, "GIBBON") ||
+		(e.stringAt(0, "GILL") && (e.idx+3 == e.lastIdx || e.idx+4 == e.lastIdx) && !e.stringStart("STURGILL")) {
+
+		return true
+	}
+
+	return false
+}
+
+func (e *Encoder) encodeGaToJ() bool {
+	// 'margary', 'margarine'
+	// but not in spanish forms such as "margarita"
+	if (e.stringAt(-3, "MARGARY", "MARGARI") && !e.stringAt(-3, "MARGARIT")) ||
+		e.stringStart("GAOL") || e.stringAt(-2, "ALGAE") {
+
+		e.metaphAddExactApproxAlt("J", "G", "J", "K")
+		e.advanceCounter(1, 0)
+		return true
+	}
+	return false
 }
 
 func (e *Encoder) encodeH() {

@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -35,8 +34,8 @@ func TestHarness(t *testing.T) {
 	e := &Encoder{
 		EncodeVowels: true,
 	}
-	out, _ := e.Encode("Ironhorse")
-	if want, got := "ARNARS", out; want != got {
+	_, out := e.Encode("Greenhalgh")
+	if want, got := "KRANAL", out; want != got {
 		t.Fatalf("want: %v, got %v", want, got)
 	}
 }
@@ -79,11 +78,6 @@ func TestNameFiles(t *testing.T) {
 				t.Fatal(err)
 			}
 			in := line[0]
-
-			// skip if there's a G, since that isn't fully done yet (another 800 lines)
-			if strings.ContainsAny(in, "Gg") {
-				continue
-			}
 
 			cnt++
 			encodeSafe(t, "Enc", enc, in, line[1], line[2], &encErr)

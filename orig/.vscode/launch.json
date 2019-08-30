@@ -1,0 +1,10 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - Metaphone3",
+            "request": "launch",
+            "mainClass": "Metaphone3"
+        }
+    ]
+}

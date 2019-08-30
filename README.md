@@ -13,3 +13,5 @@ The reference implementation of metaphone3 in Java can be found [here](https://g
     to get too long and the other would get truncated.  (e.g. Villafranca when EncodeVowel is true)
 - Fix JAKOB
 - Fix ending CIAS and CIOS (e.g. MECIAS)
+- Fix words starting with HARGER
+- 
