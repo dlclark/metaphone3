@@ -380,7 +380,7 @@ func (e *Encoder) encodeGermanicChToK() bool {
 		!e.stringAt(-3, "KHACHAT") &&
 		(!e.charAt(2, 'I') && (!e.charAt(2, 'E') || e.stringAt(-2, "BACHER", "MACHER", "MACHEN", "LACHER"))) ||
 		// e.g. 'brecht', 'fuchs'
-		(e.stringAt(2, "T", "S") && !(e.stringStart("WHICHSOEVER", "LUNCHTIME"))) ||
+		(e.stringAt(2, "T", "S") && !(e.stringStart("LUNCHTIME", "WHICHSOEVER"))) ||
 		// e.g. 'andromache'
 		e.stringStart("SCHR") ||
 		(e.idx > 2 && e.stringAt(-2, "MACHE")) ||
@@ -1025,7 +1025,7 @@ func (e *Encoder) encodeSilentGh() bool {
 			e.stringAt(-2, "HIGH", "TIGH") ||
 			e.idx+1 == e.lastIdx ||
 			(e.stringAtEnd(2, "IE", "EY", "ES", "ER", "ED", "TY") && !e.stringAt(-5, "GALLAGHER")) ||
-			e.stringAtEnd(2, "Y", "ING", "ERTY") ||
+			e.stringAtEnd(2, "Y", "ING", "OUT", "ERTY") ||
 			(!e.isVowelAt(2) || e.stringAt(-3, "GAUGH", "GEOGH", "MAUGH") || e.stringAt(-4, "BROUGHAM")))) &&
 		// exceptions where '-g-' pronounced
 		!(e.stringStart("BALOGH", "SABAGH") || e.stringAt(-2, "BAGHDAD") ||
@@ -1662,8 +1662,8 @@ func (e *Encoder) encodeSpanishJ2() bool {
 	// spanish forms e.g. "brujo", "badajoz"
 	if e.stringAtStart(-2, "BOJA", "BAJA", "BEJA", "BOJO", "MOJA", "MOJI", "MEJI") ||
 		e.stringAtStart(-3, "FRIJO", "BRUJO", "BRUJA", "GRAJE", "GRIJA", "LEIJA", "QUIJA") ||
-		(e.stringAtEnd(-1, "OJA", "EJA", "AJOS", "EJOS", "OJAS", "OJOS", "UJON",
-			"AJOZ", "AJAL", "UJAR", "EJON", "EJAN", "AJARA") && !e.stringStart("DEJA")) {
+		e.stringAtEnd(-1, "AJOS", "EJOS", "OJAS", "OJOS", "UJON", "AJOZ", "AJAL", "UJAR", "EJON", "EJAN", "AJARA") ||
+		(e.stringAtEnd(-1, "OJA", "EJA") && !e.stringStart("DEJA")) {
 
 		e.metaphAdd('H')
 		e.advanceCounter(1, 0)
@@ -1703,7 +1703,7 @@ func (e *Encoder) namesBeginningWithJThatGetAltY() bool {
 		"JULIO", "JINNY", "JOHNS", "JACOB", "JETER", "JAFFE", "JESKE", "JANKE", "JAGER", "JANIK",
 		"JANDA", "JOSHI", "JULES", "JANTZ", "JEANS", "JUDAH", "JANUS", "JENNY", "JENEE", "JONAH",
 		"JONAS", "JACOB", "JOSUE", "JOSEF", "JULES", "JULIE", "JULIA", "JANIE", "JANIS", "JENNA",
-		"JANNA", "JEANA", "JENNI", "JEANE", "JONNA",
+		"JANNA", "JEANA", "JENNI", "JEANE", "JONNA", "JAKOB",
 		"JORDAN", "JORDON", "JOSEPH", "JOSHUA", "JOSIAH", "JOSPEH", "JUDSON", "JULIAN",
 		"JULIUS", "JUNIOR", "JUDITH", "JOESPH", "JOHNIE", "JOANNE", "JEANNE", "JOANNA", "JOSEFA",
 		"JULIET", "JANNIE", "JANELL", "JASMIN", "JANINE", "JOHNNY", "JEANIE", "JEANNA", "JOHNNA",
@@ -1714,7 +1714,7 @@ func (e *Encoder) namesBeginningWithJThatGetAltY() bool {
 		"JULIAN", "JAEGER", "JACOBY", "JENSON", "JARMAN", "JOSLIN", "JESSEN", "JAHNKE", "JACOBO",
 		"JULIEN", "JOSHUA", "JEPSON", "JULIUS", "JANSON", "JACOBI", "JUDSON", "JARBOE", "JOHSON",
 		"JANZEN", "JETTON", "JUNKER", "JONSON", "JAROSZ", "JENNER", "JAGGER", "JASMIN", "JEPSEN",
-		"JORDEN", "JANNEY", "JUHASZ", "JERGEN", "JAKOB",
+		"JORDEN", "JANNEY", "JUHASZ", "JERGEN",
 		"JOHNSON", "JOHNNIE", "JASMINE", "JEANNIE", "JOHANNA", "JANELLE", "JANETTE",
 		"JULIANA", "JUSTINA", "JOSETTE", "JOELLEN", "JENELLE", "JULIETA", "JULIANN", "JULISSA",
 		"JENETTE", "JANETTA", "JOSELYN", "JONELLE", "JESENIA", "JANESSA", "JAZMINE", "JEANENE",
@@ -1956,7 +1956,7 @@ func (e *Encoder) encodeVowelLeTransposition(idx int) bool {
 			"LETUS", "LETIV", "LETELY", "LETTER", "LETION", "LETIAN", "LETING", "LETORY", "LETTING") &&
 		// e.g. "complement" !=> KAMPALMENT
 		!(e.stringAt(offset, "LEMENT") &&
-			!(e.stringAt(-5, "BATTLE", "TANGLE", "PUZZLE", "RABBLE", "BABBLE") || e.stringAt(-4, "TABLE"))) &&
+			!(e.stringAt(-4, "BATTLE", "TANGLE", "PUZZLE", "RABBLE", "BABBLE") || e.stringAt(-3, "TABLE"))) &&
 		!(idx+2 == e.lastIdx && e.stringAt(offset-2, "OCLES", "ACLES", "AKLES")) &&
 		!e.stringAt(offset-3, "LISLE", "AISLE") && !e.stringStart("ISLE") &&
 		!e.stringStart("ROBLES") &&
@@ -2148,7 +2148,7 @@ func (e *Encoder) encodeN() {
 	}
 
 	// e.g. "aloneness",
-	if !e.stringAt(-3, "MONSIEUR") && !e.stringAt(-3, "NENESS") {
+	if !e.stringAt(-2, "MONSIEUR") && !e.stringAt(-2, "NENESS") {
 		e.metaphAdd('N')
 	}
 }
@@ -2478,7 +2478,7 @@ func (e *Encoder) encodeSj() bool {
 
 func (e *Encoder) encodeSilentFrenchSFinal() bool {
 	// "louis" is an exception because it gets two pronuncuations
-	if e.stringExact("LOUIS") {
+	if e.stringStart("LOUIS") && e.idx == e.lastIdx {
 		e.metaphAddAlt('S', unicode.ReplacementChar)
 		return true
 	}
@@ -2571,6 +2571,7 @@ func (e *Encoder) encodeIsten() bool {
 		if rootOrInflections(e.in, "CHRISTEN") || e.stringStart("CHRISTENDOM") {
 			e.metaphAddStr("S", "ST")
 		} else {
+			// e.g. 'christenson', 'christene'
 			e.metaphAddStr("ST", "ST")
 		}
 		e.idx++
@@ -3320,7 +3321,7 @@ func (e *Encoder) encodeX() {
 
 	// eat redundant 'X' or other redundant cases
 	// e.g. "excite", "exceed"
-	if e.stringAt(1, "X", "Z", "S", "CE", "CE") {
+	if e.stringAt(1, "X", "Z", "S", "CI", "CE") {
 		e.idx++
 	}
 }
@@ -3779,6 +3780,8 @@ func rootOrInflections(inWord []rune, root string) bool {
 		if lenDiff == 1 && inWord[0] == 'E' && inWord[1] == 'D' {
 			return true
 		}
+		// we now consider the 'E' to be a difference
+		lenDiff++
 	} else {
 		// check +ES
 		// check +ED
@@ -3791,6 +3794,9 @@ func rootOrInflections(inWord []rune, root string) bool {
 			inWord[1] == 'E' && (inWord[2] == 'S' || inWord[2] == 'D') {
 			return true
 		}
+
+		//we know the last letter matches, so chop it off
+		inWord = inWord[1:]
 	}
 
 	// at this point our root and inWord match, so now we're just checking the endings

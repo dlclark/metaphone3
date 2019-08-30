@@ -29,6 +29,18 @@ func TestStringAtEnd_Basic(t *testing.T) {
 	}
 }
 
+func TestRootOrInflections_Basic(t *testing.T) {
+	if want, got := true, rootOrInflections([]rune("CHRISTENING"), "CHRISTEN"); want != got {
+		t.Fatalf("rootOrInflections error, Wanted %v, got %v", want, got)
+	}
+}
+
+func TestRootOrInflections_Ache(t *testing.T) {
+	if want, got := true, rootOrInflections([]rune("ACHY"), "ACHE"); want != got {
+		t.Fatalf("rootOrInflections error, Wanted %v, got %v", want, got)
+	}
+}
+
 func testStringAt(in string, curIdx, offset int, vals ...string) bool {
 	e := &Encoder{}
 	e.in = []rune(in)

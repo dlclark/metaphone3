@@ -214,6 +214,8 @@ import java.io.*;
 
 public class Metaphone3 {
 
+	boolean debug = false;
+
 	/**
 	 * Length of word sent in to be encoded, as measured at beginning of encoding.
 	 */
@@ -339,12 +341,16 @@ public class Metaphone3 {
 	 */
 	void MetaphAdd(String in) {
 		if (!(in.equals("A") && (m_primary.length() > 0) && (m_primary.charAt(m_primary.length() - 1) == 'A'))) {
-			System.out.printf("Append Prim: %s at %s\n", in, m_inWord.substring(0, m_current+1));
+			if (debug) {
+				System.out.printf("Append Prim: %s at %s\n", in, m_inWord.substring(0, m_current+1));
+			}
 			m_primary.append(in);
 		}
 
-		if (!(in.equals("A") && (m_secondary.length() > 0) && (m_secondary.charAt(m_secondary.length() - 1) == 'A'))) {
-			System.out.printf("Append Alt: %s at %s\n", in, m_inWord.substring(0, m_current+1));
+		if (!(in.equals("A") && (m_secondary.length() > 0) && (m_secondary.charAt(m_secondary.length() - 1) == 'A'))) { 
+			if (debug) {
+				System.out.printf("Append Alt: %s at %s\n", in, m_inWord.substring(0, m_current+1));
+			}
 			m_secondary.append(in);
 		}
 	}
@@ -360,13 +366,17 @@ public class Metaphone3 {
 	 */
 	void MetaphAdd(String main, String alt) {
 		if (!(main.equals("A") && (m_primary.length() > 0) && (m_primary.charAt(m_primary.length() - 1) == 'A'))) {
-			System.out.printf("Append Prim: %s at %s\n", main, m_inWord.substring(0, m_current+1));
+			if (debug) {
+				System.out.printf("Append Prim: %s at %s\n", main, m_inWord.substring(0, m_current+1));
+			}
 			m_primary.append(main);
 		}
 
 		if (!(alt.equals("A") && (m_secondary.length() > 0) && (m_secondary.charAt(m_secondary.length() - 1) == 'A'))) {
 			if (!alt.isEmpty()) {
-				System.out.printf("Append Alt: %s at %s\n", alt, m_inWord.substring(0, m_current+1));
+				if (debug) {
+					System.out.printf("Append Alt: %s at %s\n", alt, m_inWord.substring(0, m_current+1));
+				}
 				m_secondary.append(alt);
 			}
 		}
@@ -745,12 +755,14 @@ public class Metaphone3 {
 		m_last = m_length - 1;
 
 		/////////// main loop//////////////////////////
-		while (!(m_primary.length() > m_metaphLength) && !(m_secondary.length() > m_metaphLength)) {
+		while (m_primary.length() <= m_metaphLength || m_secondary.length() <= m_metaphLength) {
 			if (m_current >= m_length) {
 				break;
 			}
 			char c = CharAt(m_current);
-			System.out.printf("Processing %s\n", c);
+			if (debug) {
+				System.out.printf("Processing %s\n", c);
+			}
 
 			switch (CharAt(m_current)) {
 			case 'B':
@@ -2133,8 +2145,8 @@ public class Metaphone3 {
 		if (StringAt((m_current - 2), 9, "WEDNESDAY", "")
 				|| StringAt((m_current - 3), 7, "HANDKER", "HANDSOM", "WINDSOR", "")
 				// french silent D at end in words or names familiar to americans
-				|| StringAt((m_current - 5), 6, "PERNOD", "ARTAUD", "RENAUD", "")
-				|| StringAt((m_current - 6), 7, "RIMBAUD", "MICHAUD", "BICHAUD", "")) {
+				|| (m_current == m_last && (StringAt((m_current - 5), 6, "PERNOD", "ARTAUD", "RENAUD", "")
+				|| StringAt((m_current - 6), 7, "RIMBAUD", "MICHAUD", "BICHAUD", "")))) {
 			m_current++;
 			return true;
 		}
@@ -2715,7 +2727,7 @@ public class Metaphone3 {
 					// e.g. 'weisgerber'
 					|| (StringAt(m_current, 6, "GERBER", "") && (m_current > 0))
 					|| StringAt((m_current - 5), 8, "SCHWAGER", "LYBARGER", "SPRENGER", "GALLAGER", "WILLIGER", "")
-					|| StringAt(0, 4, "HARGER", "") || (StringAt(0, 4, "AGER", "EGER", "") && (m_length == 4))
+					|| StringAt(0, 6, "HARGER", "") || (StringAt(0, 4, "AGER", "EGER", "") && (m_length == 4))
 					|| StringAt((m_current - 1), 6, "YGERNE", "") || StringAt((m_current - 6), 9, "SCHWEIGER", ""))
 					&& !(StringAt((m_current - 5), 10, "BELLIGEREN", "") || StringAt(0, 7, "MARGERY", "")
 							|| StringAt((m_current - 3), 8, "BERGERAC", ""))) {
@@ -6088,80 +6100,11 @@ public class Metaphone3 {
 		 m3v.SetEncodeVowels(true);
 		 m3e.SetEncodeExact(true);
 
-		 m3v.SetWord(args[0]);
-		 m3v.Encode();
+		 //m3v.SetWord("supernode");
+		 //m3v.Encode();
 
-		/*
-		 * m3.SetWord("iron");
-		 * 
-		 * m3.Encode();
-		 * 
-		 * System.out.println("iron : " + m3.GetMetaph());
-		 * System.out.println("iron : (alt) " + m3.GetAlternateMetaph());
-		 * 
-		 * m3.SetWord("witz");
-		 * 
-		 * m3.Encode();
-		 * 
-		 * System.out.println("witz : " + m3.GetMetaph());
-		 * System.out.println("witz : (alt) " + m3.GetAlternateMetaph());
-		 * 
-		 * m3.SetWord("");
-		 * 
-		 * m3.Encode();
-		 * 
-		 * System.out.println("BLANK : " + m3.GetMetaph());
-		 * System.out.println("BLANK : (alt) " + m3.GetAlternateMetaph());
-		 * 
-		 * // these settings default to false m3.SetEncodeExact(true);
-		 * m3.SetEncodeVowels(true);
-		 * 
-		 * String test = new String("Guillermo"); m3.SetWord(test); m3.Encode();
-		 * System.out.println(test + " : " + m3.GetMetaph()); System.out.println(test +
-		 * " : (alt) " + m3.GetAlternateMetaph());
-		 * 
-		 * test = "VILLASENOR"; m3.SetWord(test); m3.Encode(); System.out.println(test +
-		 * " : " + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 * 
-		 * test = "GUILLERMINA"; m3.SetWord(test); m3.Encode(); System.out.println(test
-		 * + " : " + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 * 
-		 * test = "PADILLA"; m3.SetWord(test); m3.Encode(); System.out.println(test +
-		 * " : " + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 * 
-		 * test = "BJORK"; m3.SetWord(test); m3.Encode(); System.out.println(test +
-		 * " : " + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 * 
-		 * test = "belle"; m3.SetWord(test); m3.Encode(); System.out.println(test +
-		 * " : " + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 * 
-		 * test = "ERICH"; m3.SetWord(test); m3.Encode(); System.out.println(test +
-		 * " : " + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 * 
-		 * test = "CROCE"; m3.SetWord(test); m3.Encode(); System.out.println(test +
-		 * " : " + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 * 
-		 * test = "GLOWACKI"; m3.SetWord(test); m3.Encode(); System.out.println(test +
-		 * " : " + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 * 
-		 * test = "qing"; m3.SetWord(test); m3.Encode(); System.out.println(test + " : "
-		 * + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 * 
-		 * test = "tsing"; m3.SetWord(test); m3.Encode(); System.out.println(test +
-		 * " : " + m3.GetMetaph()); System.out.println(test + " : (alt) " +
-		 * m3.GetAlternateMetaph());
-		 */
-
-		/*try {
+	
+		try {
 			// Open the file that is the first
 			// command line parameter
 			FileInputStream fstream = new FileInputStream(args[0]);
@@ -6203,6 +6146,6 @@ public class Metaphone3 {
 			in.close();
 		} catch (Exception e) {// Catch exception if any
 			System.err.println("Error: " + e.getMessage());
-		}*/
+		}
 	}
 }

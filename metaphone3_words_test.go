@@ -34,8 +34,8 @@ func TestHarness(t *testing.T) {
 	e := &Encoder{
 		EncodeVowels: true,
 	}
-	_, out := e.Encode("Greenhalgh")
-	if want, got := "KRANAL", out; want != got {
+	out, _ := e.Encode("supernode")
+	if want, got := "SAPARNAT", out; want != got {
 		t.Fatalf("want: %v, got %v", want, got)
 	}
 }

@@ -14,4 +14,4 @@ The reference implementation of metaphone3 in Java can be found [here](https://g
 - Fix JAKOB
 - Fix ending CIAS and CIOS (e.g. MECIAS)
 - Fix words starting with HARGER
-- 
+- Fix SUPERNODE (prevent D from being silent)
