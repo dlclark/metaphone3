@@ -16,11 +16,13 @@ An `Encoder` is designed to be re-used to reduce memory pressure at scale and ha
 
 
 | Option | Type | Default | Purpose |
-| --- | --- |
+| --- | --- | --- | --- |
 | `EncodeExact` | `bool` | `false` | Setting `EncodeExact` to `true` will tighten the output so that certain sounds will be differentiated.  E.g. more separation between hard "G" sounds and hard "K" sounds. |
 | `EncodeVowels` | `bool` | `false` | Setting `EncodeVowels` to `true` will include non-first-letter vowel sounds in the output.  By default only consonent sounds are included. |
 | `MaxLength` | `int` | `metaphone3.DefaultMaxLength` | This limits the output of long words and is useful to reduce the cycles and memory spent on processing long words. |
-| `metaphone3.DefaultMaxLength` | `int` | 8 | If `MaxLength` is `0` then it defaults as `metaphone3.DefaultMaxLength`, which starts as `8` (like the java implementation). |
+| `metaphone3.DefaultMaxLength` | `int` | 8 | If `MaxLength` is `0` (or negative) then it defaults as `metaphone3.DefaultMaxLength`, which starts as `8` (like the java implementation). |
+
+Additional usage details available in the [godocs](https://godoc.org/github.com/dlclark/metaphone3).
 
 ## Basis for algorithm
 The reference implementation of metaphone3 in Java can be found [here](https://github.com/OpenRefine/OpenRefine/blob/master/main/src/com/google/refine/clustering/binning/Metaphone3.java).
