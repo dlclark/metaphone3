@@ -2666,14 +2666,12 @@ func (e *Encoder) encodeSch() bool {
 			} else {
 				e.metaphAddStr("SK", "SK")
 			}
-
-			e.idx += 2
-			return true
 		} else {
 			e.metaphAdd('X')
-			e.idx += 2
-			return true
 		}
+
+		e.idx += 2
+		return true
 	}
 
 	return false
